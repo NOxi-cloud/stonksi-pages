@@ -1,7 +1,7 @@
 {
-  "name": "Oma AI-agentti – TESTI",
-  "short_name": "Agentti TESTI",
-  "description": "Henkilökohtaisen AI-agentin tehtävien, projektien ja hyväksyntöjen ohjauspaneeli.",
+  "name": "Stonksi",
+  "short_name": "Stonksi",
+  "description": "Stonksin tehtävien, osakkeiden, tutkimusten ja hyväksyntöjen ohjauspaneeli.",
   "lang": "fi",
   "start_url": "./",
   "scope": "./",
