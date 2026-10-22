@@ -1,0 +1,19 @@
+{
+  "name": "Oma AI-agentti – TESTI",
+  "short_name": "Agentti TESTI",
+  "description": "Henkilökohtaisen AI-agentin tehtävien, projektien ja hyväksyntöjen ohjauspaneeli.",
+  "lang": "fi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#10131d",
+  "theme_color": "#10131d",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
