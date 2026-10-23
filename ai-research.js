@@ -88,7 +88,15 @@ loadButton.addEventListener("click",async()=>{
  const row=document.createElement("div");row.style.cssText="border-top:1px solid #353c50;padding:12px 0";
  const open=document.createElement("button");open.type="button";open.textContent=report.query+" · "+new Date(report.generated_at).toLocaleString("fi-FI");
  open.addEventListener("click",()=>{result.textContent=report.analysis;status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI");analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");saveStatus.textContent="";analysisHeader.scrollIntoView({behavior:"smooth",block:"start"})});
- row.append(open);reportList.append(row);
+ const menu=document.createElement("details");menu.style.cssText="display:inline-block;margin-left:8px;vertical-align:middle";
+ const toggle=document.createElement("summary");toggle.textContent="⋮";toggle.setAttribute("aria-label","Analyysin toiminnot: "+report.query);toggle.style.cssText="cursor:pointer;display:inline-block;padding:8px 14px;border:1px solid #353c50;border-radius:8px";
+ menu.append(toggle);
+ const actions=document.createElement("div");actions.style.cssText="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px";
+ const update=document.createElement("button");update.type="button";update.textContent="Päivitä analyysi";
+ update.addEventListener("click",()=>{panel.querySelector("#ai-stock-query").value=report.query;menu.open=false;saveStatus.textContent="Valmis päivittämään: "+report.query+". Käynnistä uusi analyysi painikkeesta Laadi analyysi. Vanha tallenne säilyy, kunnes tallennat uuden.";panel.querySelector("#ai-stock-query").scrollIntoView({behavior:"smooth",block:"center"});panel.querySelector("#ai-stock-query").focus()});
+ const remove=document.createElement("button");remove.type="button";remove.textContent="Poista";remove.className="danger-btn";
+ remove.addEventListener("click",async()=>{if(!confirm("Poistetaanko tallennettu analyysi: "+report.query+"? Tätä ei voi perua."))return;remove.disabled=true;try{const user=await currentUser();if(!user)throw Error("Kirjaudu sisään");const {data,error}=await db.from("ai_research_reports").delete().eq("id",report.id).eq("user_id",user.id).select("id");if(error)throw error;if(!data?.length)throw Error("Poistoa ei vahvistettu. Tarkista tietokannan DELETE-oikeus.");row.remove();saveStatus.textContent="Analyysi poistettu."}catch(err){saveStatus.textContent="Poisto epäonnistui: "+err.message;remove.disabled=false}});
+ actions.append(update,remove);menu.append(actions);row.append(open,menu);reportList.append(row);
  }
  reportsVisible=true;reportList.hidden=false;loadButton.textContent="Piilota tallennetut";loadButton.setAttribute("aria-expanded","true");
  saveStatus.textContent=data.length?"Tallennetut analyysit: "+data.length:"Ei tallennettuja analyysejä.";
