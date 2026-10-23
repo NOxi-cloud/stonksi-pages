@@ -42,6 +42,14 @@ refreshUsage();
 const form=view.querySelector("#research-form");
 form?.insertAdjacentElement("beforebegin",panel);
 const button=panel.querySelector("#ai-stock-submit"),status=panel.querySelector("#ai-stock-status"),result=panel.querySelector("#ai-stock-result");
+const closeAnalysis=document.createElement("button");
+closeAnalysis.type="button";
+closeAnalysis.textContent="Sulje analyysi";
+closeAnalysis.hidden=true;
+closeAnalysis.style.margin="8px 0 12px";
+result.before(closeAnalysis);
+function showAnalysis(){closeAnalysis.hidden=false}
+closeAnalysis.addEventListener("click",()=>{result.textContent="";status.textContent="";closeAnalysis.hidden=true});
 const tools=document.createElement("div");
 tools.style.marginTop="16px";
 tools.innerHTML='<button type="button" id="ai-save-report" disabled>Tallenna analyysi pilveen</button><button type="button" id="ai-load-reports" style="margin-left:8px">Näytä tallennetut</button><p id="ai-save-status" role="status" aria-live="polite"></p><div id="ai-report-list"></div>';
@@ -73,7 +81,7 @@ loadButton.addEventListener("click",async()=>{
  for(const report of data){
  const row=document.createElement("div");row.style.cssText="border-top:1px solid #353c50;padding:12px 0";
  const open=document.createElement("button");open.type="button";open.textContent=report.query+" · "+new Date(report.generated_at).toLocaleString("fi-FI");
- open.addEventListener("click",()=>{result.textContent=report.analysis;status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI")});
+ open.addEventListener("click",()=>{result.textContent=report.analysis;status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI");showAnalysis()});
  row.append(open);reportList.append(row);
  }
  reportsVisible=true;reportList.hidden=false;loadButton.textContent="Piilota tallennetut";loadButton.setAttribute("aria-expanded","true");
@@ -86,7 +94,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
  const query=panel.querySelector("#ai-stock-query").value.trim();
  if(query.length<2)return;
  if(!navigator.onLine){status.textContent="AI-analyysi vaatii verkkoyhteyden.";return}
- button.disabled=true;button.textContent="Analyysi käynnissä…";saveButton.disabled=true;currentReport=null;result.textContent="";status.textContent="Tarkistetaan kirjautuminen...";
+ button.disabled=true;button.textContent="Analyysi käynnissä…";saveButton.disabled=true;currentReport=null;result.textContent="";closeAnalysis.hidden=true;status.textContent="Tarkistetaan kirjautuminen...";
  try{
   const {data:{session},error}=await db.auth.getSession();
   if(error||!session?.access_token){status.textContent="Kirjaudu ensin sisään Asetukset-osiossa.";return}
@@ -101,6 +109,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
   if(!response.ok)throw new Error(payload.error||"Palvelinvirhe ("+response.status+")");
   status.textContent="Analyysi valmis · Ei reaaliaikaista markkinadataa · "+new Date(payload.generated_at).toLocaleString("fi-FI");
   result.textContent=payload.analysis||"Analyysiteksti puuttuu.";
+  if(payload.analysis)showAnalysis();
   if(payload.analysis){currentReport={query,analysis:payload.analysis,generated_at:payload.generated_at};saveButton.disabled=false}
  }catch(err){status.textContent=err.name==="AbortError"?"Pyyntö aikakatkaistiin.":("Analyysi epäonnistui: "+err.message)}
  finally{button.disabled=false;button.textContent="Laadi analyysi";await refreshUsage()}
