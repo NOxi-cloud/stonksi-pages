@@ -59,7 +59,11 @@ saveButton.addEventListener("click",async()=>{
  saveStatus.textContent="Analyysi tallennettu pilveen.";currentReport=null;
  }catch(err){saveStatus.textContent="Tallennus epäonnistui: "+err.message;saveButton.disabled=false}
 });
+reportList.hidden=true;
+let reportsVisible=false;
+loadButton.setAttribute("aria-expanded","false");
 loadButton.addEventListener("click",async()=>{
+ if(reportsVisible){reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");saveStatus.textContent="";return}
  loadButton.disabled=true;saveStatus.textContent="Haetaan tallennettuja analyysejä...";
  try{
  const user=await currentUser();if(!user)throw Error("Kirjaudu sisään");
@@ -72,6 +76,7 @@ loadButton.addEventListener("click",async()=>{
  open.addEventListener("click",()=>{result.textContent=report.analysis;status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI")});
  row.append(open);reportList.append(row);
  }
+ reportsVisible=true;reportList.hidden=false;loadButton.textContent="Piilota tallennetut";loadButton.setAttribute("aria-expanded","true");
  saveStatus.textContent=data.length?"Tallennetut analyysit: "+data.length:"Ei tallennettuja analyysejä.";
  }catch(err){saveStatus.textContent="Haku epäonnistui: "+err.message}
  finally{loadButton.disabled=false}
