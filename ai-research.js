@@ -81,7 +81,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
  const query=panel.querySelector("#ai-stock-query").value.trim();
  if(query.length<2)return;
  if(!navigator.onLine){status.textContent="AI-analyysi vaatii verkkoyhteyden.";return}
- button.disabled=true;saveButton.disabled=true;currentReport=null;result.textContent="";status.textContent="Tarkistetaan kirjautuminen...";
+ button.disabled=true;button.textContent="Analyysi käynnissä…";saveButton.disabled=true;currentReport=null;result.textContent="";status.textContent="Tarkistetaan kirjautuminen...";
  try{
   const {data:{session},error}=await db.auth.getSession();
   if(error||!session?.access_token){status.textContent="Kirjaudu ensin sisään Asetukset-osiossa.";return}
@@ -98,5 +98,5 @@ panel.querySelector("form").addEventListener("submit",async e=>{
   result.textContent=payload.analysis||"Analyysiteksti puuttuu.";
   if(payload.analysis){currentReport={query,analysis:payload.analysis,generated_at:payload.generated_at};saveButton.disabled=false}
  }catch(err){status.textContent=err.name==="AbortError"?"Pyyntö aikakatkaistiin.":("Analyysi epäonnistui: "+err.message)}
- finally{button.disabled=false;await refreshUsage()}
+ finally{button.disabled=false;button.textContent="Laadi analyysi";await refreshUsage()}
 });
