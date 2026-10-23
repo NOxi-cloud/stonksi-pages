@@ -45,7 +45,7 @@ const button=panel.querySelector("#ai-stock-submit"),status=panel.querySelector(
 const tools=document.createElement("div");
 tools.style.marginTop="16px";
 tools.innerHTML='<button type="button" id="ai-save-report" disabled>Tallenna analyysi pilveen</button><button type="button" id="ai-load-reports" style="margin-left:8px">Näytä tallennetut</button><p id="ai-save-status" role="status" aria-live="polite"></p><div id="ai-report-list"></div>';
-panel.append(tools);
+panel.querySelector("#ai-stock-result").before(tools);
 const saveButton=tools.querySelector("#ai-save-report"),loadButton=tools.querySelector("#ai-load-reports"),saveStatus=tools.querySelector("#ai-save-status"),reportList=tools.querySelector("#ai-report-list");
 let currentReport=null;
 async function currentUser(){const {data:{session},error}=await db.auth.getSession();if(error||!session?.user)return null;return session.user}
