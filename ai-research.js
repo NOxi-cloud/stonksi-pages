@@ -66,7 +66,26 @@ function renderAnalysis(raw){
   }else current.lines.push(line);
  }
  if(current.lines.some(x=>x.trim()))sections.push(current);
- const block=(value)=>{const el=document.createElement("div");el.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6";el.textContent=value.trim();return el};
+ const block=(value)=>{
+  const el=document.createElement("div");el.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6";
+  const raw=String(value||"").trim();
+  const pattern=/\[([^\]\n]{1,100})\]\((https:\/\/[^\s)]+)\)|(https:\/\/[^\s)]+)/g;
+  let last=0,match;
+  while((match=pattern.exec(raw))!==null){
+   if(match.index>last)el.append(document.createTextNode(raw.slice(last,match.index)));
+   const href=match[2]||match[3];
+   try{
+    const url=new URL(href);
+    if(url.protocol!=="https:")throw Error("invalid protocol");
+    const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";
+    link.textContent=match[1]||href;link.style.cssText="color:#9cc5ff;text-decoration:underline;overflow-wrap:anywhere";
+    el.append(link);
+   }catch{el.append(document.createTextNode(match[0]))}
+   last=pattern.lastIndex;
+  }
+  if(last<raw.length)el.append(document.createTextNode(raw.slice(last)));
+  return el;
+ };
  if(sections.length<2){
   const paragraphs=text.split(/\n\s*\n/).filter(Boolean);
   if(paragraphs.length<2){result.append(block(text));return}
@@ -90,7 +109,7 @@ function describeDataQuality(payload){
   const when=new Date(quality.quote_observed_at);
   parts.push("Kurssihavainto: "+(Number.isNaN(when.getTime())?"aikaleima tuntematon":when.toLocaleString("fi-FI"))+" · Yahoo Finance (epävirallinen, mahdollisesti viivästynyt)");
  }else parts.push("Kurssihavainto: ei saatavilla");
- parts.push(quality.financial_reports_verified?"Talousraportit: varmennettu":"Talousraportit: ei varmennettuja raporttilukuja");
+ parts.push(quality.financial_reports_verified?"Talousraportit: päivätty lähdeaineisto ("+(quality.financial_reports?.[0]?.period||"raportti")+")":"Talousraportit: ei varmennettuja raporttilukuja");
  return parts.join(" · ");
 }
 function showAnalysis(){analysisHeader.style.display="flex"}
