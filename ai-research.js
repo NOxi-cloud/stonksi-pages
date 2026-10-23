@@ -43,8 +43,8 @@ const form=view.querySelector("#research-form");
 form?.insertAdjacentElement("beforebegin",panel);
 const button=panel.querySelector("#ai-stock-submit"),status=panel.querySelector("#ai-stock-status"),result=panel.querySelector("#ai-stock-result");
 const analysisHeader=document.createElement("div");
-analysisHeader.style.cssText="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 8px";
-analysisHeader.hidden=true;
+analysisHeader.style.cssText="display:none;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 8px";
+analysisHeader.style.display="none";
 const analysisTitle=document.createElement("strong");
 analysisTitle.textContent="Analyysi";
 const closeAnalysis=document.createElement("button");
@@ -53,12 +53,13 @@ closeAnalysis.textContent="Sulje";
 closeAnalysis.setAttribute("aria-label","Sulje analyysi");
 analysisHeader.append(analysisTitle,closeAnalysis);
 result.before(analysisHeader);
-function showAnalysis(){analysisHeader.hidden=false}
-closeAnalysis.addEventListener("click",()=>{result.textContent="";status.textContent="";analysisHeader.hidden=true});
+function showAnalysis(){analysisHeader.style.display="flex"}
+closeAnalysis.addEventListener("click",()=>{result.textContent="";status.textContent="";analysisHeader.style.display="none"});
 const tools=document.createElement("div");
 tools.style.marginTop="16px";
 tools.innerHTML='<button type="button" id="ai-save-report" disabled>Tallenna analyysi pilveen</button><button type="button" id="ai-load-reports" style="margin-left:8px">Näytä tallennetut</button><p id="ai-save-status" role="status" aria-live="polite"></p><div id="ai-report-list"></div>';
 panel.querySelector("#ai-stock-result").before(tools);
+tools.after(analysisHeader);
 const saveButton=tools.querySelector("#ai-save-report"),loadButton=tools.querySelector("#ai-load-reports"),saveStatus=tools.querySelector("#ai-save-status"),reportList=tools.querySelector("#ai-report-list");
 let currentReport=null;
 async function currentUser(){const {data:{session},error}=await db.auth.getSession();if(error||!session?.user)return null;return session.user}
@@ -99,7 +100,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
  const query=panel.querySelector("#ai-stock-query").value.trim();
  if(query.length<2)return;
  if(!navigator.onLine){status.textContent="AI-analyysi vaatii verkkoyhteyden.";return}
- button.disabled=true;button.textContent="Analyysi käynnissä…";saveButton.disabled=true;currentReport=null;result.textContent="";analysisHeader.hidden=true;status.textContent="Tarkistetaan kirjautuminen...";
+ button.disabled=true;button.textContent="Analyysi käynnissä…";saveButton.disabled=true;currentReport=null;result.textContent="";analysisHeader.style.display="none";status.textContent="Tarkistetaan kirjautuminen...";
  try{
   const {data:{session},error}=await db.auth.getSession();
   if(error||!session?.access_token){status.textContent="Kirjaudu ensin sisään Asetukset-osiossa.";return}
