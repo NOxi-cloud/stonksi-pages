@@ -130,6 +130,10 @@ loadButton.addEventListener("click",async()=>{
  try{
   const {data:{session}}=await db.auth.getSession();
   if(!session?.access_token)throw Error("Kirjaudu sisään");
+  // Verify update permission BEFORE spending an AI request. Rewriting the same text is harmless.
+  const {data:preflight,error:preflightError}=await db.from("ai_research_reports").update({analysis:report.analysis}).eq("id",report.id).eq("user_id",session.user.id).select("id");
+  if(preflightError)throw Error("Tallenteen päivitysoikeus puuttuu: "+preflightError.message);
+  if(!preflight?.length)throw Error("Tallennetta ei voi päivittää. AI-hakua ei tehty eikä kiintiötä kulutettu.");
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),35000);
   let response;
   try{response=await fetch("https://ywrnmfozoyniftkzcopt.supabase.co/functions/v1/stock-reseach",{
@@ -141,7 +145,7 @@ loadButton.addEventListener("click",async()=>{
   const generatedAt=payload.generated_at||new Date().toISOString();
   const {data:updated,error}=await db.from("ai_research_reports").update({analysis:payload.analysis,generated_at:generatedAt,live_data:false}).eq("id",report.id).eq("user_id",session.user.id).select("id");
   if(error)throw error;
-  if(!updated?.length)throw Error("Tallenteen päivitystä ei vahvistettu. Tarkista UPDATE-oikeus.");
+  if(!updated?.length){renderAnalysis(payload.analysis);analysisTitle.textContent="Uusi analyysi (tallennus epäonnistui): "+report.query;showAnalysis();throw Error("Uusi analyysi näkyy sivulla mutta ei tallentunut. Älä sulje sivua ennen tekstin kopiointia.");}
   report.analysis=payload.analysis;report.generated_at=generatedAt;
   open.textContent=report.query+" · "+new Date(generatedAt).toLocaleString("fi-FI");
   renderAnalysis(payload.analysis);status.textContent="Päivitetty analyysi · "+new Date(generatedAt).toLocaleString("fi-FI");
