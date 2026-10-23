@@ -144,6 +144,18 @@ function renderDataQuality(payload){
  }else row("Talousraportit: ei varmennettuja lukuja");
  const discovery=quality.report_discovery;
  if(discovery)row("Raporttihakemisto: "+(discovery.reachable?"tavoitettavissa":"ei tavoitettavissa")+" · ei todista uusimman raportin sisältöä");
+ if(discovery?.candidate_urls?.length){
+  const details=document.createElement("details");details.style.marginTop="8px";
+  const summary=document.createElement("summary");summary.textContent="Mahdollisia raporttilinkkejä ("+discovery.candidate_urls.length+") · ei varmennettuja";details.append(summary);
+  for(const href of discovery.candidate_urls.slice(0,12)){
+   try{const url=new URL(href);if(url.protocol!=="https:"||url.hostname!=="www.nokia.com")continue;
+    const p=document.createElement("p");p.style.margin="7px 0";
+    const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";link.textContent=url.pathname.split("/").filter(Boolean).slice(-1)[0]?.replace(/-/g," ")||"Nokia";link.style.color="#9cc5ff";p.append(link);details.append(p);
+   }catch{}
+  }
+  qualityPanel.append(details);
+ }
+
 }
 function showAnalysis(){analysisHeader.style.display="flex"}
 closeAnalysis.addEventListener("click",()=>{result.textContent="";status.textContent="";analysisHeader.style.display="none";qualityPanel.style.display="none"});
