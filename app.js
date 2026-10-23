@@ -73,3 +73,31 @@ document.getElementById("footer-date").textContent=new Intl.DateTimeFormat("fi-F
 if("serviceWorker"in navigator&&location.protocol!=="file:")window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 render();
 })();
+
+// Check published release independently of Supabase and AI quotas.
+const stonksiVersionBadge=document.getElementById("stonksi-version-status");
+const stonksiCurrentVersion=document.querySelector('meta[name="stonksi-version"]')?.content||"tuntematon";
+async function checkStonksiVersion(){
+ if(!stonksiVersionBadge)return;
+ try{
+  const url=new URL("./index.html",location.href);url.searchParams.set("_release_check",String(Date.now()));
+  const response=await fetch(url,{cache:"no-store"});
+  if(!response.ok)throw Error("Version check failed");
+  const html=await response.text();
+  const latest=html.match(/<meta\s+name="stonksi-version"\s+content="([^"]+)"/)?.[1];
+  if(!latest)throw Error("Missing version");
+  const current=latest===stonksiCurrentVersion;
+  stonksiVersionBadge.textContent="v"+stonksiCurrentVersion+" · "+(current?"Ajantasalla":"Vanhentunut – päivitä");
+  stonksiVersionBadge.style.color=current?"#69d5a4":"#f2bd68";
+  stonksiVersionBadge.disabled=current;
+ }catch{
+  stonksiVersionBadge.textContent="v"+stonksiCurrentVersion+" · Ei voitu tarkistaa";
+  stonksiVersionBadge.style.color="#969eb3";stonksiVersionBadge.disabled=true;
+ }
+}
+if(stonksiVersionBadge){
+ stonksiVersionBadge.addEventListener("click",()=>{if(!stonksiVersionBadge.disabled)location.reload()});
+ window.addEventListener("load",checkStonksiVersion);
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkStonksiVersion()});
+ setInterval(()=>{if(!document.hidden)checkStonksiVersion()},300000);
+}
