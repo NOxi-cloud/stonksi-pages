@@ -60,7 +60,7 @@ function renderAnalysis(raw){
  for(const line of text.split(/\r?\n/)){
   const m=line.trim().match(/^(?:#{1,4}\s+|\*\*)(.+?)(?:\*\*)?\s*$/);
   const heading=m?.[1]?.replace(/\*\*/g,"").trim();
-  if(heading&&heading.length<90&&/^(tiivistelmä|yhteenveto|yhtiö|liiketoiminta|mahdollisu|risk|talou|arvost|kasvu|näkym|skenaar|tarkistettav|johtopäät|suositus|strategia|kannattav|kilpailu|markkina|seurattav)/i.test(heading)){
+  if(heading&&heading.length<90&&/^(tiivistelmä|yhteenveto|yhtiö|liiketoiminta|mahdollisu|risk|talou|arvost|kasvu|näkym|skenaar|tarkistettav|johtopäät|suositus|strategia|kannattav|kilpailu|markkina|seurattav|lähteet|tiedon puutteet)/i.test(heading)){
    if(current.lines.some(x=>x.trim()))sections.push(current);
    current={title:heading,lines:[]};
   }else current.lines.push(line);
@@ -81,6 +81,17 @@ function renderAnalysis(raw){
   const sum=document.createElement("summary");sum.textContent=part.title;sum.style.cssText="cursor:pointer;font-weight:600";
   details.append(sum,block(part.lines.join("\n")));result.append(details);
  }
+}
+function describeDataQuality(payload){
+ const quality=payload?.data_quality;
+ if(!quality)return "Lähdetietoja ei ole saatavilla tästä analyysistä.";
+ const parts=[];
+ if(quality.quote_available&&quality.quote_observed_at){
+  const when=new Date(quality.quote_observed_at);
+  parts.push("Kurssihavainto: "+(Number.isNaN(when.getTime())?"aikaleima tuntematon":when.toLocaleString("fi-FI"))+" · Yahoo Finance (epävirallinen, mahdollisesti viivästynyt)");
+ }else parts.push("Kurssihavainto: ei saatavilla");
+ parts.push(quality.financial_reports_verified?"Talousraportit: varmennettu":"Talousraportit: ei varmennettuja raporttilukuja");
+ return parts.join(" · ");
 }
 function showAnalysis(){analysisHeader.style.display="flex"}
 closeAnalysis.addEventListener("click",()=>{result.textContent="";status.textContent="";analysisHeader.style.display="none"});
@@ -148,7 +159,7 @@ loadButton.addEventListener("click",async()=>{
   if(!updated?.length){renderAnalysis(payload.analysis);analysisTitle.textContent="Uusi analyysi (tallennus epäonnistui): "+report.query;showAnalysis();throw Error("Uusi analyysi näkyy sivulla mutta ei tallentunut. Älä sulje sivua ennen tekstin kopiointia.");}
   report.analysis=payload.analysis;report.generated_at=generatedAt;
   open.textContent=report.query+" · "+new Date(generatedAt).toLocaleString("fi-FI");
-  renderAnalysis(payload.analysis);status.textContent="Päivitetty analyysi · "+new Date(generatedAt).toLocaleString("fi-FI");
+  renderAnalysis(payload.analysis);status.textContent="Päivitetty analyysi · "+new Date(generatedAt).toLocaleString("fi-FI")+" · "+describeDataQuality(payload);
   analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();
   reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");
   saveStatus.textContent="Analyysi päivitetty ja tallennettu.";analysisHeader.scrollIntoView({behavior:"smooth",block:"start"});
@@ -182,7 +193,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
   })}finally{clearTimeout(timeout)}
   const payload=await response.json();
   if(!response.ok)throw new Error(payload.error||"Palvelinvirhe ("+response.status+")");
-  status.textContent="Analyysi valmis · Kurssitieto mahdollisesti viivästynyt; talousluvut eivät varmennettuja · "+new Date(payload.generated_at).toLocaleString("fi-FI");
+  status.textContent="Analyysi valmis · "+new Date(payload.generated_at).toLocaleString("fi-FI")+" · "+describeDataQuality(payload);
   renderAnalysis(payload.analysis||"Analyysiteksti puuttuu.");
   if(payload.analysis){analysisTitle.textContent="Analyysi: "+query;showAnalysis()}
   if(payload.analysis){currentReport={query,analysis:payload.analysis,generated_at:payload.generated_at};saveButton.disabled=false}
