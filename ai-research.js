@@ -89,7 +89,7 @@ loadButton.addEventListener("click",async()=>{
  const open=document.createElement("button");open.type="button";open.textContent=report.query+" · "+new Date(report.generated_at).toLocaleString("fi-FI");
  open.addEventListener("click",()=>{result.textContent=report.analysis;status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI");analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");saveStatus.textContent="";analysisHeader.scrollIntoView({behavior:"smooth",block:"start"})});
  const menu=document.createElement("details");menu.style.cssText="display:inline-block;margin-left:8px;vertical-align:middle";
- const toggle=document.createElement("summary");toggle.textContent="⋮";toggle.setAttribute("aria-label","Analyysin toiminnot: "+report.query);toggle.style.cssText="cursor:pointer;display:inline-block;padding:8px 14px;border:1px solid #353c50;border-radius:8px";
+ const toggle=document.createElement("summary");toggle.textContent="Toiminnot ▾";toggle.setAttribute("aria-label","Analyysin toiminnot: "+report.query);toggle.style.cssText="cursor:pointer;display:inline-block;padding:9px 12px;border:1px solid #777;border-radius:8px;background:#303849;color:#fff;font-size:14px";
  menu.append(toggle);
  const actions=document.createElement("div");actions.style.cssText="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px";
  const update=document.createElement("button");update.type="button";update.textContent="Päivitä analyysi";
