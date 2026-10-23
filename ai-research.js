@@ -87,7 +87,7 @@ loadButton.addEventListener("click",async()=>{
  for(const report of data){
  const row=document.createElement("div");row.style.cssText="border-top:1px solid #353c50;padding:12px 0";
  const open=document.createElement("button");open.type="button";open.textContent=report.query+" · "+new Date(report.generated_at).toLocaleString("fi-FI");
- open.addEventListener("click",()=>{result.textContent=report.analysis;status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI");showAnalysis()});
+ open.addEventListener("click",()=>{result.textContent=report.analysis;status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI");analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");saveStatus.textContent="";analysisHeader.scrollIntoView({behavior:"smooth",block:"start"})});
  row.append(open);reportList.append(row);
  }
  reportsVisible=true;reportList.hidden=false;loadButton.textContent="Piilota tallennetut";loadButton.setAttribute("aria-expanded","true");
@@ -115,7 +115,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
   if(!response.ok)throw new Error(payload.error||"Palvelinvirhe ("+response.status+")");
   status.textContent="Analyysi valmis · Ei reaaliaikaista markkinadataa · "+new Date(payload.generated_at).toLocaleString("fi-FI");
   result.textContent=payload.analysis||"Analyysiteksti puuttuu.";
-  if(payload.analysis)showAnalysis();
+  if(payload.analysis){analysisTitle.textContent="Analyysi: "+query;showAnalysis()}
   if(payload.analysis){currentReport={query,analysis:payload.analysis,generated_at:payload.generated_at};saveButton.disabled=false}
  }catch(err){status.textContent=err.name==="AbortError"?"Pyyntö aikakatkaistiin.":("Analyysi epäonnistui: "+err.message)}
  finally{button.disabled=false;button.textContent="Laadi analyysi";await refreshUsage()}
