@@ -3,7 +3,7 @@ const db=window.agentSupabaseClient;
 const view=document.getElementById("view-research");
 const panel=document.createElement("section");
 panel.className="panel form-panel";
-panel.innerHTML='<h2>AI-osaketutkimus (testi)</h2><p class="muted">Alustava analyysi ilman reaaliaikaisia kursseja tai verkkolähteitä. AI-palvelu voi aiheuttaa API-kuluja.</p><form id="ai-stock-form"><label for="ai-stock-query">Yhtiö tai ticker</label><input id="ai-stock-query" maxlength="160" minlength="2" required placeholder="Esim. Nokia" style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:8px 0 12px;background:#10141f;color:#fff;border:1px solid #353c50;border-radius:8px"><button class="primary-btn" id="ai-stock-submit" type="submit">Laadi analyysi</button></form><p id="ai-stock-status" role="status" aria-live="polite"></p><div id="ai-stock-result" style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6"></div>';
+panel.innerHTML='<h2>AI-osaketutkimus (testi)</h2><p class="muted">Alustava AI-analyysi. Kurssihavainto voidaan hakea tuetuille tickereille, mutta se voi olla viivästynyt. Talousluvut ja lähteet eivät vielä ole varmennettuja. AI-palvelu voi aiheuttaa API-kuluja.</p><form id="ai-stock-form"><label for="ai-stock-query">Yhtiö tai ticker</label><input id="ai-stock-query" maxlength="160" minlength="2" required placeholder="Esim. Nokia" style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:8px 0 12px;background:#10141f;color:#fff;border:1px solid #353c50;border-radius:8px"><button class="primary-btn" id="ai-stock-submit" type="submit">Laadi analyysi</button></form><p id="ai-stock-status" role="status" aria-live="polite"></p><div id="ai-stock-result" style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6"></div>';
 const usage=document.createElement("div");
 usage.style.cssText="margin:12px 0 20px";
 usage.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px"><strong>Päivän AI-analyysit</strong><span id="ai-usage-count">Ladataan…</span></div><progress id="ai-usage-progress" max="5" value="0" style="width:100%;height:12px;margin-top:8px"></progress><p class="muted" id="ai-usage-reset" style="margin-top:4px"></p>';
@@ -182,7 +182,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
   })}finally{clearTimeout(timeout)}
   const payload=await response.json();
   if(!response.ok)throw new Error(payload.error||"Palvelinvirhe ("+response.status+")");
-  status.textContent="Analyysi valmis · Ei reaaliaikaista markkinadataa · "+new Date(payload.generated_at).toLocaleString("fi-FI");
+  status.textContent="Analyysi valmis · Kurssitieto mahdollisesti viivästynyt; talousluvut eivät varmennettuja · "+new Date(payload.generated_at).toLocaleString("fi-FI");
   renderAnalysis(payload.analysis||"Analyysiteksti puuttuu.");
   if(payload.analysis){analysisTitle.textContent="Analyysi: "+query;showAnalysis()}
   if(payload.analysis){currentReport={query,analysis:payload.analysis,generated_at:payload.generated_at};saveButton.disabled=false}
