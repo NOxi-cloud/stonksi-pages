@@ -3,7 +3,7 @@ const db=window.agentSupabaseClient;
 const view=document.getElementById("view-research");
 const panel=document.createElement("section");
 panel.className="panel form-panel";
-panel.innerHTML='<h2>AI-osaketutkimus (testi)</h2><p class="muted">Alustava AI-analyysi. Kurssihavainto voidaan hakea tuetuille tickereille, mutta se voi olla viivästynyt. Talousluvut ja lähteet eivät vielä ole varmennettuja. AI-palvelu voi aiheuttaa API-kuluja.</p><form id="ai-stock-form"><label for="ai-stock-query">Yhtiö tai ticker</label><input id="ai-stock-query" maxlength="160" minlength="2" required placeholder="Esim. Nokia" style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:8px 0 12px;background:#10141f;color:#fff;border:1px solid #353c50;border-radius:8px"><button class="primary-btn" id="ai-stock-submit" type="submit">Laadi analyysi</button></form><p id="ai-stock-status" role="status" aria-live="polite"></p><div id="ai-stock-result" style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6"></div>';
+panel.innerHTML='<h2>AI-osaketutkimus (testi)</h2><p class="muted">Alustava AI-analyysi. Kurssihavainto voidaan hakea tuetuille tickereille, mutta se voi olla viivästynyt. Talouslukuja käytetään vain päivätystä Nokia-tilannekuvasta tai rajatusti virallisesta raporttitaulukosta tarkistettuina. Muilla yhtiöillä talousluvut voivat puuttua. AI-palvelu voi aiheuttaa API-kuluja.</p><form id="ai-stock-form"><label for="ai-stock-query">Yhtiö tai ticker</label><input id="ai-stock-query" maxlength="160" minlength="2" required placeholder="Esim. Nokia" style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:8px 0 12px;background:#10141f;color:#fff;border:1px solid #353c50;border-radius:8px"><button class="primary-btn" id="ai-stock-submit" type="submit">Laadi analyysi</button></form><p id="ai-stock-status" role="status" aria-live="polite"></p><div id="ai-stock-result" style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6"></div>';
 const usage=document.createElement("div");
 usage.style.cssText="margin:12px 0 20px";
 usage.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px"><strong>Päivän AI-analyysit</strong><span id="ai-usage-count">Ladataan…</span></div><progress id="ai-usage-progress" max="5" value="0" style="width:100%;height:12px;margin-top:8px"></progress><p class="muted" id="ai-usage-reset" style="margin-top:4px"></p>';
@@ -109,7 +109,7 @@ function describeDataQuality(payload){
   const when=new Date(quality.quote_observed_at);
   parts.push("Kurssihavainto: "+(Number.isNaN(when.getTime())?"aikaleima tuntematon":when.toLocaleString("fi-FI"))+" · Yahoo Finance (epävirallinen, mahdollisesti viivästynyt)");
  }else parts.push("Kurssihavainto: ei saatavilla");
- parts.push(quality.financial_reports_verified?"Talousraportit: päivätty lähdeaineisto ("+(quality.financial_reports?.[0]?.period||"raportti")+")":"Talousraportit: ei varmennettuja raporttilukuja");
+ parts.push(quality.financial_data_status==="verified_official_html"?"Talousraportti: virallinen HTML-taulukko tarkistettu ("+(quality.financial_reports?.[0]?.period||"raportti")+")":quality.financial_reports_verified?"Talousraportti: päivätty tilannekuva, ei vahvistettu uudelleen verkosta":"Talousraportit: ei varmennettuja raporttilukuja");
  return parts.join(" · ");
 }
 const qualityPanel=document.createElement("section");
@@ -127,6 +127,9 @@ function renderDataQuality(payload){
   const date=new Date(quality.quote_observed_at);
   row("Kurssi: "+(Number.isNaN(date.getTime())?"aika tuntematon":date.toLocaleString("fi-FI"))+" · epävirallinen, mahdollisesti viivästynyt");
  }else row("Kurssi: ajantasaista havaintoa ei saatu");
+ if(quality.financial_data_status==="verified_official_html")row("Talousluvut tarkistettiin tämän analyysin aikana Nokian virallisesta HTML-raporttitaulukosta.");
+ else if(quality.financial_data_status==="dated_snapshot_only")row("Talousluvut perustuvat aiemmin tarkistettuun päivättyyn tilannekuvaan. Virallisen HTML-raportin automaattista tarkistusta ei saatu vahvistettua.");
+ else if(!quality.financial_data_status&&quality.financial_reports_verified)row("Analyysin taustapalvelu ei vielä ilmoita automaattisen raporttitarkistuksen tilaa.");
  if(Number.isFinite(quality.report_age_days))row("Raportin ikä: "+quality.report_age_days+" päivää · raportti ei ole reaaliaikainen");
  if(quality.financial_reports_verified&&quality.financial_reports?.length){
   for(const report of quality.financial_reports){
@@ -143,6 +146,9 @@ function renderDataQuality(payload){
    row("Liikevoittojen erotus: "+checks.operating_profit_adjustment_million_eur+" milj. € (syitä ei päätellä)");
   }
  }else row("Talousraportit: ei varmennettuja lukuja");
+ const fetched=quality.report_fetch;
+ if(fetched?.status==="not_verified_from_live_html")row("Automaattista raporttitietojen poimintaa ei voitu varmentaa.");
+ if(fetched?.attempted?.length)row("Virallisten raporttiosoitteiden tarkistusyrityksiä: "+fetched.attempted.length);
  const discovery=quality.report_discovery;
  if(discovery)row("Raporttihakemisto: "+(discovery.reachable?"tavoitettavissa":"ei tavoitettavissa")+" · ei todista uusimman raportin sisältöä");
  if(discovery?.candidate_reports?.some(item=>item.newer_than_snapshot===true))row("Huomio: löytyi mahdollisesti uudempi raporttilinkki. Talouslukuja ei ole päivitetty ilman varmennusta.");
