@@ -1,9 +1,12 @@
 # Oma AI-agentti – tietosuoja (testiversio)
 
-Päivitetty 18.10.2026. Tämä on sovelluksen tekninen tietosuojakuvaus, ei vielä valmis lakisääteinen tietosuojaseloste.
+Päivitetty 24.10.2026. Tämä on sovelluksen tekninen tietosuojakuvaus, ei vielä valmis lakisääteinen tietosuojaseloste.
 
 ## Käsiteltävät tiedot
 Supabase Auth käsittelee kirjautumisen sähköpostiosoitetta ja tunnistautumistietoja. Kirjautuneen käyttäjän tehtävät, tutkimusaiheet, osakeseuranta, hyväksyntäpäätökset ja erikseen tallennetut AI-osakeanalyysit tallentuvat Supabaseen. Muistiinpanot tallentuvat tämänhetkisessä versiossa selaimen paikalliseen tallennustilaan. Selaimessa säilytetään myös kirjautumisistunnon tietoja ja synkronointijonoja.
+
+## Käyttötilastot
+Kirjautuneen käyttäjän aktiivisista sivunäkymistä voidaan tallentaa Supabaseen käyttäjätunniste, sivun luokka sekä ajankohta. Käyttötilastoihin ei tallenneta IP-osoitteita, selaimen sormenjälkeä, osakehakuja tai hakusanoja. Ylläpitäjä näkee ainoastaan yhteenlaskettuja päivittäisiä ja sivukohtaisia tietoja. Sivunäkymätilastojen tietokantasäilytys on enintään noin 90 päivää käyttötapahtumien perusteella tehtävän siivouksen mukaisesti. Uloskirjautuneiden kävijöiden määrää ei näissä tilastoissa lasketa. Seuranta otetaan käyttöön vasta tarvittavan tietokantapäivityksen jälkeen.
 
 ## Palvelut
 Sovelluksen käyttöliittymä julkaistaan GitHub Pagesissa. Tietokanta ja kirjautuminen toimivat Supabasessa. Käyttäjän erikseen käynnistämä AI-analyysi välitetään Supabase Edge Functionin kautta OpenAI API:lle. Älä kirjoita tutkimuskenttiin salasanoja, henkilötunnuksia tai muuta arkaluonteista sisältöä.
