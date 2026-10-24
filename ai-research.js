@@ -104,73 +104,53 @@ function renderAnalysis(raw){
 }
 function describeDataQuality(payload){return describeEvidence(payload?.data_quality)}
 const qualityPanel=document.createElement("section");
-qualityPanel.style.cssText="display:none;border:1px solid #353c50;border-radius:10px;padding:12px;margin:12px 0;line-height:1.6";
-qualityPanel.setAttribute("aria-label","Analyysin tietolähteet");
-analysisHeader.after(qualityPanel);
+qualityPanel.className="ai-quality-card";qualityPanel.hidden=true;
+qualityPanel.setAttribute("aria-label","Analyysin lähtötiedot");analysisHeader.after(qualityPanel);
 function renderDataQuality(payload){
  qualityPanel.replaceChildren();
- const quality=payload?.data_quality;
- if(!quality){qualityPanel.style.display="none";return}
- qualityPanel.style.display="block";
- const title=document.createElement("strong");title.textContent="Lähtötietojen laatu";qualityPanel.append(title);
- const row=(text)=>{const p=document.createElement("p");p.style.margin="6px 0";p.textContent=text;qualityPanel.append(p)};
- if(quality.quote_available&&quality.quote_observed_at){
-  const date=new Date(quality.quote_observed_at);
-  row("Kurssi: "+(Number.isNaN(date.getTime())?"aika tuntematon":date.toLocaleString("fi-FI"))+" · epävirallinen, mahdollisesti viivästynyt");
- }else row("Kurssi: ajantasaista havaintoa ei saatu");
- if(quality.financial_data_status==="verified_official_html")row("Talousluvut tarkistettiin tämän analyysin aikana Nokian virallisesta HTML-raporttitaulukosta.");
- else if(quality.financial_data_status==="dated_snapshot_only")row("Talousluvut perustuvat aiemmin tarkistettuun päivättyyn tilannekuvaan. Virallisen HTML-raportin automaattista tarkistusta ei saatu vahvistettua.");
- else if(!quality.financial_data_status&&quality.financial_reports_verified)row("Analyysin taustapalvelu ei vielä ilmoita automaattisen raporttitarkistuksen tilaa.");
- if(quality.quote_stale)row("Varoitus: viimeisin kurssihavainto on vanhentunut eikä sovellu nykyhintaan.");
- if(Number.isFinite(quality.quote_age_hours))row("Kurssihavainnon ikä: "+quality.quote_age_hours.toLocaleString("fi-FI")+" tuntia.");
- const sensitivity=quality.price_sensitivity;
- if(Array.isArray(sensitivity)&&sensitivity.length){
-  const details=document.createElement("details"),title=document.createElement("summary");
-  title.textContent="Hintaherkkyys ±10 % ja ±20 % (ei ennuste eikä suositus)";details.append(title);
-  const currency=quality.quote_currency||"";
-  for(const point of sensitivity){if(!Number.isFinite(point.change_pct)||!Number.isFinite(point.hypothetical_price))continue;
-   const line=document.createElement("p");line.textContent=(point.change_pct>0?"+":"")+point.change_pct+" %: "+point.hypothetical_price.toLocaleString("fi-FI",{maximumFractionDigits:4})+" "+currency;details.append(line)}
-  qualityPanel.append(details);
+ const q=payload?.data_quality;
+ if(!q){qualityPanel.hidden=true;return}
+ qualityPanel.hidden=false;
+ const h=document.createElement("strong");h.textContent="Lähtötietojen yhteenveto";qualityPanel.append(h);
+ const fmtDate=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?"Aika puuttuu":d.toLocaleString("fi-FI",{dateStyle:"short",timeStyle:"short"})};
+ const summary=document.createElement("div");summary.className="ai-quality-summary";
+ const summaryRow=(label,value)=>{const row=document.createElement("div");row.className="ai-quality-summary-row";const a=document.createElement("span"),b=document.createElement("strong");a.textContent=label;b.textContent=value;row.append(a,b);summary.append(row)};
+ summaryRow("Kurssi",q.quote_available?fmtDate(q.quote_observed_at)+" · epävirallinen":"Ei saatavilla");
+ const reports=Array.isArray(q.financial_reports)?q.financial_reports:[];
+ const report=reports[0]||null;
+ const status=q.financial_data_status;
+ summaryRow("Raportti",report?(report.period+" · "+(status==="verified_official_html"?"Tarkistettu":status==="source_link_only"?"Lähdeviite":"Päivätty")):"Ei saatavilla");
+ qualityPanel.append(summary);
+ const details=document.createElement("details");details.className="ai-quality-details";
+ const label=document.createElement("summary");label.textContent="Näytä lähteet, talousluvut ja tarkistukset";details.append(label);
+ const row=text=>{const p=document.createElement("p");p.textContent=text;details.append(p)};
+ if(q.quote_available)row("Kurssihavainto: "+fmtDate(q.quote_observed_at)+" · "+(q.quote_source||"epävirallinen lähde")+(q.quote_stale?" · vanhentunut":""));
+ else row("Kurssihavaintoa ei saatu.");
+ if(Number.isFinite(q.quote_age_hours))row("Kurssihavainnon ikä: "+q.quote_age_hours.toLocaleString("fi-FI")+" tuntia");
+ if(report){
+  row("Raportti: "+(report.source||report.period)+" · "+report.published_at);
+  row(status==="verified_official_html"?"Virallinen HTML-taulukko tarkistettu tätä analyysiä varten":status==="source_link_only"?"Virallisen raportin lähdeviite, yksittäisiä talouslukuja ei vahvistettu":"Päivätty tilannekuva, ei uudelleentarkistettu");
+  if(report.note)row(report.note);
+  for(const [key,caption] of [["net_sales_reported","Liikevaihto"],["operating_profit_reported","Raportoitu liikevoitto"],["operating_profit_comparable","Vertailukelpoinen liikevoitto"]]){
+   if(Number.isFinite(report[key]))row(caption+": "+report[key].toLocaleString("fi-FI")+" milj. €");
+  }
+  if(report.source_url){try{const url=new URL(report.source_url);if(url.protocol==="https:"){
+   const a=document.createElement("a");a.href=url.href;a.target="_blank";a.rel="noopener noreferrer";a.textContent="Avaa raportin lähdesivu ↗";details.append(a);
+  }}catch{}}
+ }else row("Varmennettuja talousraporttitietoja ei ole.");
+ const checks=q.financial_checks;
+ if(checks)row("Marginaalitarkistus: "+(checks.reported_margin_matches&&checks.comparable_margin_matches?"Täsmää pyöristystarkkuudella":"Epäselvä, tarkistettava")+" · liikevoiton erotus "+checks.operating_profit_adjustment_million_eur+" milj. €");
+ if(q.report_fetch?.attempted?.length)row("Raporttien tarkistusyrityksiä: "+q.report_fetch.attempted.length);
+ const series=Array.isArray(q.price_sensitivity)?q.price_sensitivity:[];
+ if(series.length){const nested=document.createElement("details"),sum=document.createElement("summary");sum.textContent="Hintaherkkyys ±10 % ja ±20 % (ei ennuste)";nested.append(sum);
+  for(const item of series){if(!Number.isFinite(item.change_pct)||!Number.isFinite(item.hypothetical_price))continue;
+   const p=document.createElement("p");p.textContent=(item.change_pct>0?"+":"")+item.change_pct+" %: "+item.hypothetical_price.toLocaleString("fi-FI",{maximumFractionDigits:4})+" "+(q.quote_currency||"");nested.append(p)}
+  details.append(nested);
  }
- if(Number.isFinite(quality.report_age_days))row("Raportin ikä: "+quality.report_age_days+" päivää · raportti ei ole reaaliaikainen");
- if(quality.financial_reports?.length){
-  for(const report of quality.financial_reports){
-   row("Raportti: "+report.period+" · julkaistu "+report.published_at+" · "+(quality.financial_data_status==="verified_official_html"?"tarkistettu virallisesta HTML-taulukosta":"päivätty tilannekuva, ei tarkistettu uudelleen"));
-   if(typeof report.net_sales_reported==="number")row("Liikevaihto: "+report.net_sales_reported.toLocaleString("fi-FI")+" milj. €");
-   if(typeof report.operating_profit_reported==="number"&&typeof report.operating_profit_comparable==="number")row("Liikevoitto: raportoitu "+report.operating_profit_reported+" milj. € · vertailukelpoinen "+report.operating_profit_comparable+" milj. €");
-   if(report.source_url){
-    try{const url=new URL(report.source_url);if(url.protocol==="https:"){const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Avaa virallinen raportti ↗";link.style.color="#9cc5ff";qualityPanel.append(link)}}catch{}
-   }
-  }
-  const checks=quality.financial_checks;
-  if(checks){
-   row("Marginaalien laskentatarkistus: "+(checks.reported_margin_matches&&checks.comparable_margin_matches?"täsmää pyöristystarkkuudella":"ristiriita – tarkista lähdeluvut"));
-   row("Liikevoittojen erotus: "+checks.operating_profit_adjustment_million_eur+" milj. € (syitä ei päätellä)");
-  }
- }else row("Talousraportit: ei varmennettuja lukuja");
- const fetched=quality.report_fetch;
- if(fetched?.status==="not_verified_from_live_html")row("Automaattista raporttitietojen poimintaa ei voitu varmentaa.");
- if(fetched?.attempted?.length)row("Virallisten raporttiosoitteiden tarkistusyrityksiä: "+fetched.attempted.length);
- const discovery=quality.report_discovery;
- if(discovery)row("Raporttihakemisto: "+(discovery.reachable?"tavoitettavissa":"ei tavoitettavissa")+" · ei todista uusimman raportin sisältöä");
- if(discovery?.candidate_reports?.some(item=>item.newer_than_snapshot===true))row("Huomio: löytyi mahdollisesti uudempi raporttilinkki. Talouslukuja ei ole päivitetty ilman varmennusta.");
- if(discovery?.candidate_urls?.length){
-  const details=document.createElement("details");details.style.marginTop="8px";
-  const summary=document.createElement("summary");summary.textContent="Mahdollisia raporttilinkkejä ("+discovery.candidate_urls.length+") · ei varmennettuja";details.append(summary);
-  for(const href of discovery.candidate_urls.slice(0,12)){
-   try{const url=new URL(href);if(url.protocol!=="https:"||url.hostname!=="www.nokia.com")continue;
-    const p=document.createElement("p");p.style.margin="7px 0";
-    const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";const candidate=discovery.candidate_reports?.find(item=>item.url===href);
-    link.textContent=(candidate?.period?candidate.period+" · ":"")+(url.pathname.split("/").filter(Boolean).slice(-1)[0]?.replace(/-/g," ")||"Nokia");
-    if(candidate?.newer_than_snapshot===true){const note=document.createElement("span");note.textContent=" · Mahdollisesti uudempi – ei varmennettu";p.append(note)}link.style.color="#9cc5ff";p.append(link);details.append(p);
-   }catch{}
-  }
-  qualityPanel.append(details);
- }
-
+ qualityPanel.append(details);
 }
 function showAnalysis(){analysisHeader.style.display="flex"}
-closeAnalysis.addEventListener("click",()=>{result.textContent="";status.textContent="";analysisHeader.style.display="none";qualityPanel.style.display="none"});
+closeAnalysis.addEventListener("click",()=>{result.textContent="";status.textContent="";analysisHeader.style.display="none";qualityPanel.hidden=true});
 const tools=document.createElement("div");
 tools.style.marginTop="16px";
 tools.innerHTML='<button type="button" id="ai-save-report" disabled>Tallenna analyysi pilveen</button><button type="button" id="ai-load-reports" style="margin-left:8px">Näytä tallennetut</button><p id="ai-save-status" role="status" aria-live="polite"></p><div id="ai-report-list"></div>';

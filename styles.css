@@ -28,3 +28,15 @@
 .stock-chart-body svg.stock-chart-touch-surface{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overscroll-behavior:contain}
 .stock-chart-body svg.stock-chart-touch-surface *{pointer-events:none}
 .stock-chart-body svg.stock-chart-touch-surface rect[fill="transparent"]{pointer-events:all}
+
+/* Compact research provenance card (details remain accessible, nothing is silently hidden). */
+.ai-quality-card{border:1px solid #353c50;border-radius:12px;padding:14px;margin:12px 0;line-height:1.55;min-width:0}
+.ai-quality-card[hidden]{display:none!important}
+.ai-quality-summary{display:grid;gap:8px;margin:12px 0}
+.ai-quality-summary-row{display:flex;align-items:start;justify-content:space-between;gap:10px;font-size:13px}
+.ai-quality-summary-row span{color:#a9b0c3;flex:0 0 72px}
+.ai-quality-summary-row strong{text-align:right;overflow-wrap:anywhere;min-width:0;font-size:13px}
+.ai-quality-details{border-top:1px solid #353c50;padding-top:12px;font-size:13px;overflow-wrap:anywhere}
+.ai-quality-details summary{cursor:pointer;min-height:40px;font-weight:650}
+.ai-quality-details p{margin:8px 0}
+.ai-quality-details a{display:inline-block;color:#9cc5ff;margin:8px 0;overflow-wrap:anywhere}
