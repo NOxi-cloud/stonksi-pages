@@ -4,6 +4,8 @@ export function financialEvidenceLabel(quality){
  const period=typeof reports[0]?.period==="string"?reports[0].period:"raportti";
  if(quality?.financial_data_status==="verified_official_html"&&reports.length)
   return "Talousraportti: "+period+" tarkistettu virallisesta raporttitaulukosta";
+ if(quality?.financial_data_status==="source_link_only")
+  return "Talousraportti: "+period+" lähdeviite (ei vahvistettuja tunnuslukuja)";
  if(quality?.financial_data_status==="dated_snapshot_only"||reports.length)
   return "Talousraportti: "+period+" päivätty tilannekuva (ei tarkistettu uudelleen)";
  return "Talousraportit: ei raporttilukuja saatavilla";

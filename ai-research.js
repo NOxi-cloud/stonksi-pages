@@ -4,12 +4,34 @@ const db=window.agentSupabaseClient;
 const view=document.getElementById("view-research");
 const panel=document.createElement("section");
 panel.className="panel form-panel";
-panel.innerHTML='<h2>AI-osaketutkimus (testi)</h2><p class="muted">Alustava AI-analyysi. Kurssihavainto voidaan hakea tuetuille tickereille, mutta se voi olla viivästynyt. Talouslukuja käytetään vain päivätystä Nokia-tilannekuvasta tai rajatusti virallisesta raporttitaulukosta tarkistettuina. Muilla yhtiöillä talousluvut voivat puuttua. AI-palvelu voi aiheuttaa API-kuluja.</p><form id="ai-stock-form"><label for="ai-stock-query">Yhtiö tai ticker</label><input id="ai-stock-query" maxlength="160" minlength="2" required placeholder="Esim. Nokia" style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:8px 0 12px;background:#10141f;color:#fff;border:1px solid #353c50;border-radius:8px"><button class="primary-btn" id="ai-stock-submit" type="submit">Laadi analyysi</button></form><p id="ai-stock-status" role="status" aria-live="polite"></p><div id="ai-stock-result" style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6"></div>';
+panel.innerHTML='<h2>AI-osaketutkimus (testi)</h2><p class="muted">Valitse yhtiö tai kirjoita ticker. Nokia ja Nurminen sisältävät lähteistettyjä talouslukuja; Keskolle ja F-Securelle on päivätyt raporttiviitteet. Puuttuvia lukuja ei arvata. AI-analyysin käynnistäminen kuluttaa käyttökiintiötä ja voi aiheuttaa API-kuluja.</p><form id="ai-stock-form"><label for="ai-stock-query">Yhtiö tai ticker</label><input id="ai-stock-query" maxlength="160" minlength="2" required placeholder="Esim. Nokia" style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:8px 0 12px;background:#10141f;color:#fff;border:1px solid #353c50;border-radius:8px"><button class="primary-btn" id="ai-stock-submit" type="submit">Laadi analyysi</button></form><p id="ai-stock-status" role="status" aria-live="polite"></p><div id="ai-stock-result" style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6"></div>';
 const usage=document.createElement("div");
 usage.style.cssText="margin:12px 0 20px";
 usage.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px"><strong>Päivän AI-analyysit</strong><span id="ai-usage-count">Ladataan…</span></div><progress id="ai-usage-progress" max="5" value="0" style="width:100%;height:12px;margin-top:8px"></progress><p class="muted" id="ai-usage-reset" style="margin-top:4px"></p>';
 usage.insertAdjacentHTML("beforeend",'<div style="margin-top:12px;display:flex;justify-content:space-between;gap:12px"><strong>Koko palvelun analyysit</strong><span id="ai-global-count">Ladataan…</span></div><progress id="ai-global-progress" max="10" value="0" style="width:100%;height:12px;margin-top:8px"></progress><p class="muted" id="ai-global-reset" style="margin-top:4px"></p>');
 panel.insertBefore(usage,panel.querySelector("form"));
+const companyPicker=document.createElement("div");
+companyPicker.className="ai-company-picker";
+const companyLabel=document.createElement("p");
+companyLabel.className="muted";companyLabel.textContent="Valitse seurattava yhtiö (täyttää kentän, ei käynnistä analyysiä)";
+companyPicker.append(companyLabel);
+const companyButtons=document.createElement("div");
+companyButtons.className="ai-company-buttons";
+for(const [name,symbol] of [["Nokia","NOKIA.HE"],["Kesko B","KESKOB.HE"],["F-Secure","FSECURE.HE"],["Nurminen Logistics","NLG1V.HE"]]){
+ const chip=document.createElement("button");
+ chip.type="button";chip.className="ai-company-chip";
+ chip.textContent=name;chip.title="Valitse "+symbol;
+ chip.addEventListener("click",()=>{
+  const input=panel.querySelector("#ai-stock-query");
+  input.value=symbol;input.focus();
+  for(const b of companyButtons.querySelectorAll("button"))b.setAttribute("aria-pressed",String(b===chip));
+ });
+ chip.setAttribute("aria-pressed","false");
+ companyButtons.append(chip);
+}
+companyPicker.append(companyButtons);
+panel.querySelector("#ai-stock-query").insertAdjacentElement("afterend",companyPicker);
+
 const usageCount=usage.querySelector("#ai-usage-count"),usageProgress=usage.querySelector("#ai-usage-progress"),usageReset=usage.querySelector("#ai-usage-reset");
 const globalCount=usage.querySelector("#ai-global-count"),globalProgress=usage.querySelector("#ai-global-progress"),globalReset=usage.querySelector("#ai-global-reset");
 async function refreshGlobalUsage(){
@@ -228,7 +250,7 @@ loadButton.addEventListener("click",async()=>{
  actions.append(update,remove);menu.append(actions);row.append(open,menu);reportList.append(row);
  }
  reportsVisible=true;reportList.hidden=false;loadButton.textContent="Piilota tallennetut";loadButton.setAttribute("aria-expanded","true");
- saveStatus.textContent=data.length?"Tallennetut analyysit: "+data.length:"Ei tallennettuja analyysejä.";
+ saveStatus.textContent=data.length?"Tallennetut analyysit: "+data.length+" · Listassa näkyvät vain erikseen luodut ja tallennetut analyysit.":"Ei tallennettuja analyysejä. Yhtiövalinnoista voit luoda uusia.";
  }catch(err){saveStatus.textContent="Haku epäonnistui: "+err.message}
  finally{loadButton.disabled=false}
 });

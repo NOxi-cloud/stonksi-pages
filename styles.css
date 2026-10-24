@@ -40,3 +40,6 @@
 .ai-quality-details summary{cursor:pointer;min-height:40px;font-weight:650}
 .ai-quality-details p{margin:8px 0}
 .ai-quality-details a{display:inline-block;color:#9cc5ff;margin:8px 0;overflow-wrap:anywhere}
+
+/* AI company quick-selection: explicit action, no silent quota consumption. */
+.ai-company-picker{margin:0 0 14px}.ai-company-picker p{margin:0 0 6px;font-size:13px}.ai-company-buttons{display:flex;flex-wrap:wrap;gap:8px}.ai-company-chip{background:#242a3c;color:#e4e7f4;border:1px solid #41465f;border-radius:18px;padding:8px 12px;min-height:42px;font:inherit;cursor:pointer}.ai-company-chip[aria-pressed="true"]{background:#433765;border-color:#a793fa}.ai-company-chip:focus-visible{outline:2px solid #b4a1ff;outline-offset:2px}

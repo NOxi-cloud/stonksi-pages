@@ -1,4 +1,4 @@
-const CACHE_NAME="oma-agentti-preview-shell-v75";
+const CACHE_NAME="oma-agentti-preview-shell-v76";
 const APP_SHELL=["./","./index.html","./styles.css","./app.js","./cloud.js","./research-sync.js","./stock-sync.js","./stock-workspace.js","./stock-chart.js","./stock-chart-utils.mjs","./approval-sync.js","./ai-research.js","./ai-data-quality.mjs","./privacy.md","./account-deletion.js","./manifest.webmanifest","./icon.svg"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
