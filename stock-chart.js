@@ -81,21 +81,58 @@ function draw(chart,status,data){
  line.setAttribute("fill","none");line.setAttribute("stroke",change>=0?"#48c995":"#f08383");line.setAttribute("stroke-width","2.7");line.setAttribute("stroke-linejoin","round");
  line.setAttribute("points",points.map(p=>x(p.t).toFixed(2)+","+y(p.price).toFixed(2)).join(" "));
  svg.append(line);chart.append(svg);
- const inspect=el("p","stock-chart-inspect muted","Siirrä sormea tai hiirtä graafin päällä nähdäksesi havaintohinnan.");
+ const inspect=el("p","stock-chart-inspect muted","Pidä sormea graafilla ja vedä nähdäksesi hinnat.");
  chart.append(inspect);
  const guide=document.createElementNS(ns,"line");
  guide.setAttribute("stroke","#c4b5fd");guide.setAttribute("stroke-width","1.4");guide.setAttribute("stroke-dasharray","4 4");guide.setAttribute("y1","36");guide.setAttribute("y2","255");guide.style.display="none";svg.append(guide);
- const updateCursor=(event)=>{
+ // Capture the active touch/pointer so mobile scroll gestures do not interrupt scrubbing.
+ // Update only once per frame, even if Android produces many pointermove events.
+ svg.classList.add("stock-chart-touch-surface");
+ const hit=document.createElementNS(ns,"rect");
+ hit.setAttribute("x","0");hit.setAttribute("y","0");hit.setAttribute("width","720");hit.setAttribute("height","290");
+ hit.setAttribute("fill","transparent");hit.setAttribute("pointer-events","all");svg.append(hit);
+ let trackedPointer=null,pendingClientX=null,frame=0;
+ const showAt=(clientX)=>{
   const rect=svg.getBoundingClientRect();if(!rect.width)return;
-  const relative=(event.clientX-rect.left)/rect.width;
-  const index=nearestIndex(points,Math.max(0,Math.min(1,(relative*720-48)/624)));
-  if(index<0)return;
+  const ratio=Math.max(0,Math.min(1,((clientX-rect.left)/rect.width*720-48)/624));
+  const index=nearestIndex(points,ratio);if(index<0)return;
   const point=points[index],label=new Date(point.t*1000).toLocaleString("fi-FI",{dateStyle:"short",timeStyle:"short"});
   guide.setAttribute("x1",String(x(point.t)));guide.setAttribute("x2",String(x(point.t)));guide.style.display="";
   inspect.textContent=label+" · "+fmt(point.price)+" "+unit;
  };
- svg.addEventListener("pointermove",updateCursor);
- svg.addEventListener("pointerleave",()=>{guide.style.display="none";inspect.textContent="Siirrä sormea tai hiirtä graafin päällä nähdäksesi havaintohinnan."});
+ const schedule=(clientX)=>{
+  pendingClientX=clientX;
+  if(frame)return;
+  frame=requestAnimationFrame(()=>{frame=0;if(pendingClientX!==null)showAt(pendingClientX)});
+ };
+ const startScrub=(event)=>{
+  if(!event.isPrimary||event.button>0)return;
+  trackedPointer=event.pointerId;
+  try{svg.setPointerCapture(event.pointerId)}catch{}
+  schedule(event.clientX);
+  if(event.cancelable)event.preventDefault();
+ };
+ svg.addEventListener("pointerdown",startScrub);
+ svg.addEventListener("pointermove",event=>{
+  if(trackedPointer!==null&&event.pointerId!==trackedPointer)return;
+  if(event.pointerType==="touch"&&trackedPointer===null)return;
+  schedule(event.clientX);
+  if(trackedPointer!==null&&event.cancelable)event.preventDefault();
+ });
+ const stopScrub=event=>{
+  if(event.pointerId!==trackedPointer)return;
+  trackedPointer=null;
+  try{if(svg.hasPointerCapture(event.pointerId))svg.releasePointerCapture(event.pointerId)}catch{}
+  // Keep the last selected observation visible after releasing the finger.
+ };
+ svg.addEventListener("pointerup",stopScrub);
+ svg.addEventListener("pointercancel",stopScrub);
+ svg.addEventListener("lostpointercapture",()=>{trackedPointer=null});
+ svg.addEventListener("pointerleave",event=>{
+  if(trackedPointer!==null||event.pointerType==="touch")return;
+  guide.style.display="none";
+  inspect.textContent="Pidä sormea graafilla ja vedä nähdäksesi hinnat.";
+ });
  const metricsBox=el("div","stock-chart-metrics");
  for(const [label,value] of [["Jakson alin",fmt(periodLow)+" "+unit],["Jakson ylin",fmt(periodHigh)+" "+unit],["Muutos",(metrics.change>=0?"+":"")+fmt(metrics.change)+" "+unit],["Havaintoja",String(points.length)]]){
   const cell=el("div","stock-metric");cell.append(el("span","muted",label),el("strong","",value));metricsBox.append(cell)
