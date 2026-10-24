@@ -127,6 +127,7 @@ function renderDataQuality(payload){
   const date=new Date(quality.quote_observed_at);
   row("Kurssi: "+(Number.isNaN(date.getTime())?"aika tuntematon":date.toLocaleString("fi-FI"))+" · epävirallinen, mahdollisesti viivästynyt");
  }else row("Kurssi: ajantasaista havaintoa ei saatu");
+ if(Number.isFinite(quality.report_age_days))row("Raportin ikä: "+quality.report_age_days+" päivää · raportti ei ole reaaliaikainen");
  if(quality.financial_reports_verified&&quality.financial_reports?.length){
   for(const report of quality.financial_reports){
    row("Raportti: "+report.period+" · julkaistu "+report.published_at+" · päivätty tilannekuva");
@@ -144,6 +145,7 @@ function renderDataQuality(payload){
  }else row("Talousraportit: ei varmennettuja lukuja");
  const discovery=quality.report_discovery;
  if(discovery)row("Raporttihakemisto: "+(discovery.reachable?"tavoitettavissa":"ei tavoitettavissa")+" · ei todista uusimman raportin sisältöä");
+ if(discovery?.candidate_reports?.some(item=>item.newer_than_snapshot===true))row("Huomio: löytyi mahdollisesti uudempi raporttilinkki. Talouslukuja ei ole päivitetty ilman varmennusta.");
  if(discovery?.candidate_urls?.length){
   const details=document.createElement("details");details.style.marginTop="8px";
   const summary=document.createElement("summary");summary.textContent="Mahdollisia raporttilinkkejä ("+discovery.candidate_urls.length+") · ei varmennettuja";details.append(summary);
