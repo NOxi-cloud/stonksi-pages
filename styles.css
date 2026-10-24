@@ -6,3 +6,18 @@
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 /* Supabase preview: accessible, stacked auth fields on mobile */
 #cloud-panel{overflow:hidden}#cloud-panel>label{display:block;margin:14px 0 5px;font-size:12px;color:var(--muted)}#cloud-panel>input{display:block;width:100%;max-width:480px;min-width:0;min-height:44px;padding:11px 12px;background:#10141f;color:var(--text);border:1px solid #353c50;border-radius:9px}#cloud-panel .form-actions{justify-content:flex-start;flex-wrap:wrap}#cloud-panel .form-actions button{white-space:normal;min-height:44px}#cloud-panel p{overflow-wrap:anywhere}@media(max-width:600px){#cloud-panel{padding:17px}#cloud-panel .form-actions{gap:10px}#cloud-panel .form-actions button{flex:1 1 130px}#cloud-panel>input{font-size:16px}}
+
+/* Charts live only in the opened stock detail panel. */
+#stock-chart-detail[hidden]{display:none}
+.stock-open-chart{background:none;color:#bfc2ff;border:0;text-align:left;padding:8px 3px;text-decoration:underline;text-underline-offset:3px;white-space:normal;cursor:pointer;font:inherit;font-weight:700}
+.stock-open-chart:hover,.stock-open-chart:focus-visible{color:#eeeaff}
+.stock-chart-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.stock-chart-heading h3{margin:0;font-size:16px;overflow-wrap:anywhere}
+.stock-chart-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.stock-period{background:#22283a;color:#cdd6ed;border:1px solid #353c50;border-radius:8px;padding:10px 13px;cursor:pointer;min-height:42px}
+.stock-period.active{background:#38345d;color:#fff;border-color:#9181ed}
+.stock-period:focus-visible,.stock-open-chart:focus-visible{outline:2px solid #c1b6ff;outline-offset:2px}
+.stock-chart-body{overflow:hidden;max-width:100%}
+.stock-chart-body svg{width:100%;height:auto;display:block;color:#b6c2d9;min-height:180px}
+.stock-chart-foot{margin-top:8px;line-height:1.6}
+@media(max-width:700px){.stock-chart-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.stock-chart-body svg{min-height:145px}.stock-open-chart{min-height:44px}}
