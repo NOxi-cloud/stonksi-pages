@@ -130,10 +130,21 @@ function renderDataQuality(payload){
  if(quality.financial_data_status==="verified_official_html")row("Talousluvut tarkistettiin tämän analyysin aikana Nokian virallisesta HTML-raporttitaulukosta.");
  else if(quality.financial_data_status==="dated_snapshot_only")row("Talousluvut perustuvat aiemmin tarkistettuun päivättyyn tilannekuvaan. Virallisen HTML-raportin automaattista tarkistusta ei saatu vahvistettua.");
  else if(!quality.financial_data_status&&quality.financial_reports_verified)row("Analyysin taustapalvelu ei vielä ilmoita automaattisen raporttitarkistuksen tilaa.");
+ if(quality.quote_stale)row("Varoitus: viimeisin kurssihavainto on vanhentunut eikä sovellu nykyhintaan.");
+ if(Number.isFinite(quality.quote_age_hours))row("Kurssihavainnon ikä: "+quality.quote_age_hours.toLocaleString("fi-FI")+" tuntia.");
+ const sensitivity=quality.price_sensitivity;
+ if(Array.isArray(sensitivity)&&sensitivity.length){
+  const details=document.createElement("details"),title=document.createElement("summary");
+  title.textContent="Hintaherkkyys ±10 % ja ±20 % (ei ennuste eikä suositus)";details.append(title);
+  const currency=quality.quote_currency||"";
+  for(const point of sensitivity){if(!Number.isFinite(point.change_pct)||!Number.isFinite(point.hypothetical_price))continue;
+   const line=document.createElement("p");line.textContent=(point.change_pct>0?"+":"")+point.change_pct+" %: "+point.hypothetical_price.toLocaleString("fi-FI",{maximumFractionDigits:4})+" "+currency;details.append(line)}
+  qualityPanel.append(details);
+ }
  if(Number.isFinite(quality.report_age_days))row("Raportin ikä: "+quality.report_age_days+" päivää · raportti ei ole reaaliaikainen");
- if(quality.financial_reports_verified&&quality.financial_reports?.length){
+ if(quality.financial_reports?.length){
   for(const report of quality.financial_reports){
-   row("Raportti: "+report.period+" · julkaistu "+report.published_at+" · päivätty tilannekuva");
+   row("Raportti: "+report.period+" · julkaistu "+report.published_at+" · "+(quality.financial_data_status==="verified_official_html"?"tarkistettu virallisesta HTML-taulukosta":"päivätty tilannekuva, ei tarkistettu uudelleen"));
    if(typeof report.net_sales_reported==="number")row("Liikevaihto: "+report.net_sales_reported.toLocaleString("fi-FI")+" milj. €");
    if(typeof report.operating_profit_reported==="number"&&typeof report.operating_profit_comparable==="number")row("Liikevoitto: raportoitu "+report.operating_profit_reported+" milj. € · vertailukelpoinen "+report.operating_profit_comparable+" milj. €");
    if(report.source_url){
