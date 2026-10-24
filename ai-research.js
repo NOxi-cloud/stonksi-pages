@@ -150,7 +150,9 @@ function renderDataQuality(payload){
   for(const href of discovery.candidate_urls.slice(0,12)){
    try{const url=new URL(href);if(url.protocol!=="https:"||url.hostname!=="www.nokia.com")continue;
     const p=document.createElement("p");p.style.margin="7px 0";
-    const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";link.textContent=url.pathname.split("/").filter(Boolean).slice(-1)[0]?.replace(/-/g," ")||"Nokia";link.style.color="#9cc5ff";p.append(link);details.append(p);
+    const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";const candidate=discovery.candidate_reports?.find(item=>item.url===href);
+    link.textContent=(candidate?.period?candidate.period+" · ":"")+(url.pathname.split("/").filter(Boolean).slice(-1)[0]?.replace(/-/g," ")||"Nokia");
+    if(candidate?.newer_than_snapshot===true){const note=document.createElement("span");note.textContent=" · Mahdollisesti uudempi – ei varmennettu";p.append(note)}link.style.color="#9cc5ff";p.append(link);details.append(p);
    }catch{}
   }
   qualityPanel.append(details);
