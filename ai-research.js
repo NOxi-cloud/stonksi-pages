@@ -1,3 +1,4 @@
+import {filterWatchlistSuggestions} from "./ai-watchlist-suggestions.mjs";
 import {describeEvidence} from "./ai-data-quality.mjs";
 // Research UI: explicit user-triggered AI request, never runs trades.
 const db=window.agentSupabaseClient;
@@ -10,6 +11,45 @@ usage.style.cssText="margin:12px 0 20px";
 usage.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px"><strong>Päivän AI-analyysit</strong><span id="ai-usage-count">Ladataan…</span></div><progress id="ai-usage-progress" max="5" value="0" style="width:100%;height:12px;margin-top:8px"></progress><p class="muted" id="ai-usage-reset" style="margin-top:4px"></p>';
 usage.insertAdjacentHTML("beforeend",'<div style="margin-top:12px;display:flex;justify-content:space-between;gap:12px"><strong>Koko palvelun analyysit</strong><span id="ai-global-count">Ladataan…</span></div><progress id="ai-global-progress" max="10" value="0" style="width:100%;height:12px;margin-top:8px"></progress><p class="muted" id="ai-global-reset" style="margin-top:4px"></p>');
 panel.insertBefore(usage,panel.querySelector("form"));
+const aiInput=panel.querySelector("#ai-stock-query");
+const suggestions=document.createElement("div");
+suggestions.className="ai-watchlist-suggestions";suggestions.hidden=true;
+suggestions.setAttribute("aria-label","Oman seurantalistan osakkeet");
+aiInput.insertAdjacentElement("afterend",suggestions);
+let ownWatchlist=[],watchlistOwner=null,watchlistReady=false;
+function renderWatchlistSuggestions(){
+ suggestions.replaceChildren();
+ const currentUid=window.agentStockSyncState?.owner||null;
+ if(!watchlistReady||!watchlistOwner||currentUid!==watchlistOwner){suggestions.hidden=true;return}
+ const matches=filterWatchlistSuggestions(ownWatchlist,aiInput.value);
+ if(!matches.length){suggestions.hidden=true;return}
+ const caption=document.createElement("span");caption.className="ai-watchlist-caption";
+ caption.textContent="Omalta seurantalistalta";suggestions.append(caption);
+ const buttons=document.createElement("div");buttons.className="ai-watchlist-buttons";
+ for(const item of matches){
+  const b=document.createElement("button");b.type="button";b.className="ai-watchlist-choice";
+  b.textContent=item.name;b.title=item.ticker;
+  b.addEventListener("click",()=>{aiInput.value=item.ticker;suggestions.hidden=true;aiInput.focus()});
+  buttons.append(b);
+ }
+ suggestions.append(buttons);suggestions.hidden=false;
+}
+document.addEventListener("agent:stocks-loaded",()=>{const state=window.agentStockSyncState;
+ if(!state?.owner||!state.ready){watchlistReady=false;ownWatchlist=[];watchlistOwner=null;renderWatchlistSuggestions();return}
+ watchlistOwner=state.owner;watchlistReady=true;ownWatchlist=window.agentStockBridge?.get()||[];
+ renderWatchlistSuggestions();
+});
+document.addEventListener("agent:stock-change",()=>queueMicrotask(()=>{
+ const state=window.agentStockSyncState;
+ if(!state?.ready||state.owner!==watchlistOwner)return;
+ ownWatchlist=window.agentStockBridge?.get()||[];renderWatchlistSuggestions();
+}));
+aiInput.addEventListener("input",renderWatchlistSuggestions);
+db.auth.onAuthStateChange(()=>{watchlistReady=false;watchlistOwner=null;ownWatchlist=[];suggestions.hidden=true;setTimeout(()=>{
+ const state=window.agentStockSyncState;if(!state?.ready||!state.owner)return;
+ watchlistOwner=state.owner;watchlistReady=true;ownWatchlist=window.agentStockBridge?.get()||[];renderWatchlistSuggestions();
+},0)});
+
 const usageCount=usage.querySelector("#ai-usage-count"),usageProgress=usage.querySelector("#ai-usage-progress"),usageReset=usage.querySelector("#ai-usage-reset");
 const globalCount=usage.querySelector("#ai-global-count"),globalProgress=usage.querySelector("#ai-global-progress"),globalReset=usage.querySelector("#ai-global-reset");
 async function refreshGlobalUsage(){

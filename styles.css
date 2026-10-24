@@ -40,3 +40,5 @@
 .ai-quality-details summary{cursor:pointer;min-height:40px;font-weight:650}
 .ai-quality-details p{margin:8px 0}
 .ai-quality-details a{display:inline-block;color:#9cc5ff;margin:8px 0;overflow-wrap:anywhere}
+
+.ai-watchlist-suggestions{margin:0 0 12px}.ai-watchlist-suggestions[hidden]{display:none!important}.ai-watchlist-caption{display:block;font-size:12px;color:#a9b0c3;margin:2px 0 7px}.ai-watchlist-buttons{display:flex;gap:7px;flex-wrap:wrap}.ai-watchlist-choice{font:inherit;font-size:13px;background:#242a3c;color:#e3e4f3;border:1px solid #41465f;border-radius:9px;padding:7px 11px;min-height:40px;cursor:pointer}.ai-watchlist-choice:focus-visible{outline:2px solid #ad9af7;outline-offset:2px}

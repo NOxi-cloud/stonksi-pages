@@ -2,6 +2,7 @@ const db=window.agentSupabaseClient;
 const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
 const key=(u,s)=>"oma-preview-stocks-"+s+"-"+u;
 let owner=null,version=0,busy=false,active=false,original=null;
+window.agentStockSyncState={owner:null,ready:false};
 const pending=u=>read(key(u,"queue"),[]);
 function merge(rows,changes){const m=new Map(rows.map(x=>[x.id,x]));for(const c of changes){if(c.action==="delete")m.delete(c.id);else m.set(c.id,c.item)}return [...m.values()]}
 function show(items){window.agentStockBridge?.set(items);document.dispatchEvent(new Event("agent:stocks-loaded"))}
@@ -18,19 +19,20 @@ async function flush(){
  finally{busy=false}
 }
 async function session(){
- const v=++version,{data}=await db.auth.getSession();
+ const v=++version;window.agentStockSyncState={owner:null,ready:false};document.dispatchEvent(new Event("agent:stocks-loaded"));
+ const {data}=await db.auth.getSession();
  if(v!==version)return;
  const uid=data.session?.user?.id||null;
  if(!uid){owner=null;if(active&&original)show(original);active=false;return}
  if(!active)original=window.agentStockBridge?.get()||[];
  active=true;owner=uid;
  const cache=read(key(uid,"cache"),null);
- if(cache!==null)show(merge(cache,pending(uid)));
- else if(pending(uid).length)show(merge([],pending(uid)));
+ if(cache!==null){window.agentStockSyncState={owner:uid,ready:true};show(merge(cache,pending(uid)))}
+ else if(pending(uid).length){window.agentStockSyncState={owner:uid,ready:true};show(merge([],pending(uid)))}
  if(navigator.onLine){
  const result=await db.from("stock_sync").select("id,name,ticker,exchange,quantity,average_cost,price,currency,price_time,quote_source,change,change_percent").eq("user_id",uid);
  if(v!==version||owner!==uid)return;
- if(!result.error){const items=merge(result.data,pending(uid));localStorage.setItem(key(uid,"cache"),JSON.stringify(items));show(items)}
+ if(!result.error){const items=merge(result.data,pending(uid));localStorage.setItem(key(uid,"cache"),JSON.stringify(items));window.agentStockSyncState={owner:uid,ready:true};show(items)}
  }
  await flush();
 }
