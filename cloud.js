@@ -72,8 +72,9 @@ async function loadCloud(uid,version){
  message(pending(uid).length?`${pending(uid).length} muutosta odottaa synkronointia.`:"Pilvitehtävät ladattu. Tehtävien muutokset tallennetaan pilveen.");
 }
 async function onSession(session){
- ready=false;syncError=null;const version=++sessionVersion;user=session?.user||null;
+ ready=false;syncError=null;const version=++sessionVersion;adminRequestEpoch++;adminCheckInFlight=false;user=session?.user||null;
  window.agentLocalBridge?.setUser(user?.id||null);
+ document.dispatchEvent(new CustomEvent("agent:admin-access",{detail:{uid:user?.id||null,isAdmin:false}}));
  document.body.classList.remove("auth-pending","auth-guest","auth-user");
  document.body.classList.add(user?"auth-user":"auth-guest");
  const settingsHeading=document.querySelector("#view-settings .page-heading h1");
@@ -218,13 +219,16 @@ async function adminRequest(method,payload){
  return result;
 }
 let adminCheckInFlight=false;
+let adminRequestEpoch=0;
 async function loadAdminUsers(){
  if(adminCheckInFlight||!user)return;
+ const expectedUid=user.id,requestEpoch=adminRequestEpoch;
  adminPanel.hidden=true;adminStatus.textContent="Haetaan käyttäjiä…";
  adminCheckInFlight=true;
  try{
   const data=await adminRequest("GET");
-  if(!user)return;
+  if(!user||user.id!==expectedUid||requestEpoch!==adminRequestEpoch)return;
+  document.dispatchEvent(new CustomEvent("agent:admin-access",{detail:{uid:expectedUid,isAdmin:true}}));
   adminPanel.hidden=false;
   if(data.limits){document.getElementById("admin-user-limit").value=data.limits.user_daily_limit;document.getElementById("admin-global-limit").value=data.limits.global_daily_limit;}
   const inactivitySelect=document.getElementById("admin-inactivity-months");
@@ -270,12 +274,14 @@ async function loadAdminUsers(){
   }
   adminStatus.textContent="Käyttäjiä: "+(data.users?.length||0)+" (enintään 100 ensimmäistä).";
  }catch(error){
+  if(!user||user.id!==expectedUid||requestEpoch!==adminRequestEpoch)return;
+  document.dispatchEvent(new CustomEvent("agent:admin-access",{detail:{uid:expectedUid,isAdmin:false}}));
   if(error.status===403||error.status===401){
    adminPanel.hidden=true;
 adminList.replaceChildren();
    adminStatus.textContent="";
   }else{
-   adminPanel.hidden=false;
+   adminPanel.hidden=true;
    adminStatus.textContent="Ylläpidon yhteysvirhe ("+(error.status||"verkko")+"): "+(error.message||"Tuntematon virhe");
   }
  }finally{adminCheckInFlight=false;}

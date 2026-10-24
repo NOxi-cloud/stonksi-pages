@@ -2,14 +2,29 @@
 "use strict";
 const LEGACY_KEY="oma-agentti-v1";
 let activeUid=null;
+let adminVerified=false;
+const RESTRICTED_VIEWS=new Set(["development","approvals"]);
+function applyAdminAccess(){
+ document.querySelectorAll("[data-admin-only]").forEach(node=>{
+  node.hidden=!adminVerified;
+  if(node.tagName==="OPTION")node.disabled=!adminVerified;
+ });
+ if(!adminVerified&&document.querySelector(".view.active[data-admin-only]"))showView("home");
+}
+document.addEventListener("agent:admin-access",event=>{
+ if(!activeUid||event.detail?.uid!==activeUid)return;
+ adminVerified=event.detail.isAdmin===true;
+ applyAdminAccess();
+});
 const scopedKey=()=>activeUid?`oma-agentti-local-v2-${activeUid}`:null;
-const defaultState={tasks:[{id:"t1",title:"Määritä tekoälymallin palvelinpuolen yhteys",priority:"Korkea",category:"Kehitys",done:false,created:Date.now()},{id:"t2",title:"Valitse maksuton pilvitietokanta ja kirjautuminen",priority:"Normaali",category:"Kehitys",done:false,created:Date.now()},{id:"t3",title:"Selvitä Helsinki-pörssin kurssidatan vaihtoehdot",priority:"Normaali",category:"Osakkeet",done:false,created:Date.now()}],approvals:[{id:"a1",title:"Esimerkkipyyntö: ota käyttöön pilvisynkronointi",detail:"Tämä on käyttöliittymän esimerkki. Hyväksyntä ei vielä suorita ulkoisia toimintoja.",created:Date.now(),status:"pending"}],research:[],memories:[],stocks:[{id:"s1",name:"Nokia",ticker:"NOKIA",exchange:"Helsinki"},{id:"s2",name:"Metso",ticker:"METSO",exchange:"Helsinki"},{id:"s3",name:"Wärtsilä",ticker:"WRT1V",exchange:"Helsinki"},{id:"s4",name:"Kesko B",ticker:"KESKOB",exchange:"Helsinki"}],activity:[{id:"e1",text:"PWA:n paikallinen käyttöliittymä avattiin.",time:Date.now()}]};
+const defaultState={tasks:[],approvals:[],research:[],memories:[],stocks:[{id:"s1",name:"Nokia",ticker:"NOKIA",exchange:"Helsinki"},{id:"s2",name:"Metso",ticker:"METSO",exchange:"Helsinki"},{id:"s3",name:"Wärtsilä",ticker:"WRT1V",exchange:"Helsinki"},{id:"s4",name:"Kesko B",ticker:"KESKOB",exchange:"Helsinki"}],activity:[{id:"e1",text:"PWA:n paikallinen käyttöliittymä avattiin.",time:Date.now()}]};
 let state=structuredClone(defaultState),toastTimer,cloudMode=false;
 let localSnapshot=structuredClone(state);
 window.agentLocalBridge={setUser(uid){
  const next=uid||null;
  if(activeUid===next)return;
  activeUid=next;cloudMode=false;
+ adminVerified=false;applyAdminAccess();
  state=next?loadState():structuredClone(defaultState);
  localSnapshot=structuredClone(state);
  render();
@@ -59,7 +74,8 @@ function render(){const open=state.tasks.filter(t=>!t.done),pending=state.approv
  const changeText=change!==null&&percent!==null&&Number.isFinite(change)&&Number.isFinite(percent)?(change>=0?"+":"")+new Intl.NumberFormat("fi-FI",{maximumFractionDigits:4}).format(change)+" "+currency+" / "+(percent>=0?"+":"")+new Intl.NumberFormat("fi-FI",{maximumFractionDigits:2}).format(percent)+" %":"—";
  return '<tr><td class="stock-name"><button type="button" class="stock-open-chart" data-stock-chart="'+esc(stock.id)+'" aria-label="Avaa osakkeen '+esc(stock.name)+' kurssigraafi">'+esc(stock.name)+'</button></td><td class="stock-ticker">'+esc(stock.ticker)+'</td><td>'+esc(stock.exchange)+'</td><td class="table-status">'+esc(priceText)+'</td><td>'+esc(changeText)+'</td><td>'+esc(time||"—")+'</td><td><button class="icon-btn" data-action="delete-stock" data-id="'+esc(stock.id)+'" aria-label="Poista osake">×</button></td></tr>';
 }).join("");save()}
-function showView(name){const target=document.getElementById("view-"+name);if(!target)return;document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v===target));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",name===b.dataset.view&&b.classList.contains("nav-item")));window.scrollTo({top:0,behavior:"smooth"})}
+function showView(name){if(RESTRICTED_VIEWS.has(name)&&!adminVerified)name="home";const target=document.getElementById("view-"+name);if(!target)return;document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v===target));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",name===b.dataset.view&&b.classList.contains("nav-item")));window.scrollTo({top:0,behavior:"smooth"})}
+applyAdminAccess();
 function showTaskForm(){showView("tasks");document.getElementById("task-form").classList.remove("hidden");document.getElementById("task-title").focus()}
 document.addEventListener("click",e=>{const v=e.target.closest("[data-view]");if(v){e.preventDefault();showView(v.dataset.view);return}const chartButton=e.target.closest("[data-stock-chart]");if(chartButton){document.dispatchEvent(new CustomEvent("agent:open-stock-chart",{detail:{id:chartButton.dataset.stockChart}}));return}const b=e.target.closest("[data-action]");if(!b)return;const a=b.dataset.action,itemId=b.dataset.id;if(a==="new-task"){showTaskForm();return}if(a==="cancel-task"){document.getElementById("task-form").classList.add("hidden");return}if(a==="toggle-task"){const t=state.tasks.find(x=>x.id===itemId);if(t){t.done=b.checked;log((t.done?"Tehtävä merkitty valmiiksi: ":"Tehtävä avattu: ")+t.title);render();cloudChange("upsert",t)}return}if(a==="delete-task"){state.tasks=state.tasks.filter(t=>t.id!==itemId);log("Tehtävä poistettiin.");render();cloudChange("delete",null,itemId);notify("Tehtävä poistettu.");return}if(a==="approve"||a==="reject"){const item=state.approvals.find(x=>x.id===itemId);if(item){item.status=a==="approve"?"approved":"rejected";approvalChange(item);log((a==="approve"?"Hyväksytty paikallisesti: ":"Hylätty paikallisesti: ")+item.title);render();notify("Päätös tallennettu; synkronointi käynnistyy verkkoyhteydellä.")}return}if(a==="delete-research"){state.research=state.research.filter(r=>r.id!==itemId);render();researchChange("delete",null,itemId);return}if(a==="delete-memory"){state.memories=state.memories.filter(m=>m.id!==itemId);log("Muistiinpano poistettiin.");render();return}if(a==="delete-stock"){state.stocks=state.stocks.filter(s=>s.id!==itemId);render();stockChange("delete",null,itemId);notify("Osake poistettu seurannasta.")}});
 document.querySelectorAll(".notice-close").forEach(b=>b.addEventListener("click",()=>b.closest(".notice")?.remove()));
