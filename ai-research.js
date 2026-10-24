@@ -129,8 +129,9 @@ function renderDataQuality(payload){
  if(Number.isFinite(q.quote_age_hours))row("Kurssihavainnon ikä: "+q.quote_age_hours.toLocaleString("fi-FI")+" tuntia");
  if(report){
   row("Raportti: "+(report.source||report.period)+" · "+report.published_at);
-  row(status==="verified_official_html"?"Virallinen HTML-taulukko tarkistettu tätä analyysiä varten":status==="source_link_only"?"Virallisen raportin lähdeviite, yksittäisiä talouslukuja ei vahvistettu":"Päivätty tilannekuva, ei uudelleentarkistettu");
+  row(status==="verified_official_html"?"Virallinen raporttisisältö tarkistettu tätä analyysiä varten":status==="source_link_only"?"Virallisen raportin lähdeviite, yksittäisiä talouslukuja ei vahvistettu":"Päivätty tilannekuva, ei uudelleentarkistettu");
   if(report.note)row(report.note);
+  if(Array.isArray(report.metrics))for(const metric of report.metrics){if(typeof metric.value==="number"&&Number.isFinite(metric.value))row(metric.label+": "+metric.value.toLocaleString("fi-FI")+" "+metric.unit)}
   for(const [key,caption] of [["net_sales_reported","Liikevaihto"],["operating_profit_reported","Raportoitu liikevoitto"],["operating_profit_comparable","Vertailukelpoinen liikevoitto"]]){
    if(Number.isFinite(report[key]))row(caption+": "+report[key].toLocaleString("fi-FI")+" milj. €");
   }
