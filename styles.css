@@ -21,3 +21,5 @@
 .stock-chart-body svg{width:100%;height:auto;display:block;color:#b6c2d9;min-height:180px}
 .stock-chart-foot{margin-top:8px;line-height:1.6}
 @media(max-width:700px){.stock-chart-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.stock-chart-body svg{min-height:145px}.stock-open-chart{min-height:44px}}
+
+.stock-chart-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0}.stock-metric{border:1px solid #353c50;border-radius:9px;padding:10px;min-width:0}.stock-metric span,.stock-metric strong{display:block;overflow-wrap:anywhere}.stock-metric strong{margin-top:5px;font-size:13px}.stock-chart-inspect{min-height:22px;margin:4px 0}.stock-chart-stale{border-left:3px solid #daa85b;padding-left:8px;margin-top:12px}@media(max-width:700px){.stock-chart-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
