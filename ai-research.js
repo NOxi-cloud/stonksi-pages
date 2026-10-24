@@ -1,3 +1,4 @@
+import {describeEvidence} from "./ai-data-quality.mjs";
 // Research UI: explicit user-triggered AI request, never runs trades.
 const db=window.agentSupabaseClient;
 const view=document.getElementById("view-research");
@@ -101,17 +102,7 @@ function renderAnalysis(raw){
   details.append(sum,block(part.lines.join("\n")));result.append(details);
  }
 }
-function describeDataQuality(payload){
- const quality=payload?.data_quality;
- if(!quality)return "Lähdetietoja ei ole saatavilla tästä analyysistä.";
- const parts=[];
- if(quality.quote_available&&quality.quote_observed_at){
-  const when=new Date(quality.quote_observed_at);
-  parts.push("Kurssihavainto: "+(Number.isNaN(when.getTime())?"aikaleima tuntematon":when.toLocaleString("fi-FI"))+" · Yahoo Finance (epävirallinen, mahdollisesti viivästynyt)");
- }else parts.push("Kurssihavainto: ei saatavilla");
- parts.push(quality.financial_data_status==="verified_official_html"?"Talousraportti: virallinen HTML-taulukko tarkistettu ("+(quality.financial_reports?.[0]?.period||"raportti")+")":quality.financial_reports_verified?"Talousraportti: päivätty tilannekuva, ei vahvistettu uudelleen verkosta":"Talousraportit: ei varmennettuja raporttilukuja");
- return parts.join(" · ");
-}
+function describeDataQuality(payload){return describeEvidence(payload?.data_quality)}
 const qualityPanel=document.createElement("section");
 qualityPanel.style.cssText="display:none;border:1px solid #353c50;border-radius:10px;padding:12px;margin:12px 0;line-height:1.6";
 qualityPanel.setAttribute("aria-label","Analyysin tietolähteet");

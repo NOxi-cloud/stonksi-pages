@@ -38,5 +38,16 @@ export function quoteIsOld(utcSeconds,period,now=Date.now()){
   if(!Number.isFinite(utcSeconds))return true;
   // Heuristic only: markets close on weekends and holidays, so always give the exact timestamp too.
   const hours=(now-utcSeconds*1000)/3600000;
+  // Non-trading weekends are not inherently stale; still show the exact observation timestamp.
+  if(["1h","1d"].includes(period)){
+    const observed=new Date(utcSeconds*1000),current=new Date(now);
+    if(current.getUTCDay()===6||current.getUTCDay()===0){
+      const mostRecentFriday=new Date(current);
+      const days=current.getUTCDay()===6?1:2;
+      mostRecentFriday.setUTCDate(mostRecentFriday.getUTCDate()-days);
+      mostRecentFriday.setUTCHours(0,0,0,0);
+      if(observed>=mostRecentFriday)return false;
+    }
+  }
   return hours>(["1h","1d"].includes(period)?12:period==="1w"?120:period==="1y"?96:period==="5y"?14*24:45*24);
 }
