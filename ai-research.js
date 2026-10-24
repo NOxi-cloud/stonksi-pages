@@ -1,39 +1,53 @@
-import {filterWatchlistSuggestions} from "./ai-watchlist-suggestions.mjs";
+import {watchlistSuggestions} from "./ai-watchlist-suggestions.mjs";
 import {describeEvidence} from "./ai-data-quality.mjs";
 // Research UI: explicit user-triggered AI request, never runs trades.
 const db=window.agentSupabaseClient;
 const view=document.getElementById("view-research");
 const panel=document.createElement("section");
 panel.className="panel form-panel";
-panel.innerHTML='<h2>AI-osaketutkimus (testi)</h2><p class="muted">Kirjoita yhtiön nimi tai ticker ja käynnistä analyysi halutessasi. Talouslukujen saatavuus riippuu yhtiöstä ja lähteistä. AI-analyysi kuluttaa käyttökiintiötä ja voi aiheuttaa API-kuluja.</p><form id="ai-stock-form"><label for="ai-stock-query">Yhtiö tai ticker</label><input id="ai-stock-query" maxlength="160" minlength="2" required placeholder="Esim. Nokia" style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:8px 0 12px;background:#10141f;color:#fff;border:1px solid #353c50;border-radius:8px"><button class="primary-btn" id="ai-stock-submit" type="submit">Laadi analyysi</button></form><p id="ai-stock-status" role="status" aria-live="polite"></p><div id="ai-stock-result" style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6"></div>';
+panel.innerHTML='<h2>AI-osaketutkimus (testi)</h2><p class="muted">Kirjoita yhtiön nimi tai ticker ja käynnistä analyysi halutessasi. Talouslukujen saatavuus riippuu yhtiöstä ja lähteistä. AI-analyysi kuluttaa käyttökiintiötä ja voi aiheuttaa API-kuluja.</p><form id="ai-stock-form"><label for="ai-stock-query">Yhtiö tai ticker</label><input id="ai-stock-query" maxlength="160" minlength="2" required placeholder="Esim. Nokia" style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:8px 0 12px;background:#10141f;color:#fff;border:1px solid #353c50;border-radius:8px"><div class="ai-analysis-actions"><button class="primary-btn" id="ai-stock-submit" type="submit">Laadi analyysi</button></div></form><p id="ai-stock-status" role="status" aria-live="polite"></p><div id="ai-stock-result" style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6"></div>';
 const usage=document.createElement("div");
 usage.style.cssText="margin:12px 0 20px";
 usage.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px"><strong>Päivän AI-analyysit</strong><span id="ai-usage-count">Ladataan…</span></div><progress id="ai-usage-progress" max="5" value="0" style="width:100%;height:12px;margin-top:8px"></progress><p class="muted" id="ai-usage-reset" style="margin-top:4px"></p>';
 usage.insertAdjacentHTML("beforeend",'<div style="margin-top:12px;display:flex;justify-content:space-between;gap:12px"><strong>Koko palvelun analyysit</strong><span id="ai-global-count">Ladataan…</span></div><progress id="ai-global-progress" max="10" value="0" style="width:100%;height:12px;margin-top:8px"></progress><p class="muted" id="ai-global-reset" style="margin-top:4px"></p>');
 panel.insertBefore(usage,panel.querySelector("form"));
 const aiInput=panel.querySelector("#ai-stock-query");
-const suggestions=document.createElement("div");
-suggestions.className="ai-watchlist-suggestions";suggestions.hidden=true;
-suggestions.setAttribute("aria-label","Oman seurantalistan osakkeet");
-aiInput.insertAdjacentElement("afterend",suggestions);
+const watchlistSelect=document.createElement("select");
+watchlistSelect.className="ai-watchlist-select";
+watchlistSelect.hidden=true;
+watchlistSelect.disabled=true;
+watchlistSelect.setAttribute("aria-label","Valitse osake omalta seurantalistalta");
+panel.querySelector(".ai-analysis-actions").append(watchlistSelect);
 let ownWatchlist=[],watchlistOwner=null,watchlistReady=false;
 function renderWatchlistSuggestions(){
- suggestions.replaceChildren();
  const currentUid=window.agentStockSyncState?.owner||null;
- if(!watchlistReady||!watchlistOwner||currentUid!==watchlistOwner){suggestions.hidden=true;return}
- const matches=filterWatchlistSuggestions(ownWatchlist,aiInput.value);
- if(!matches.length){suggestions.hidden=true;return}
- const caption=document.createElement("span");caption.className="ai-watchlist-caption";
- caption.textContent="Omalta seurantalistalta";suggestions.append(caption);
- const buttons=document.createElement("div");buttons.className="ai-watchlist-buttons";
- for(const item of matches){
-  const b=document.createElement("button");b.type="button";b.className="ai-watchlist-choice";
-  b.textContent=item.name;b.title=item.ticker;
-  b.addEventListener("click",()=>{aiInput.value=item.ticker;suggestions.hidden=true;aiInput.focus()});
-  buttons.append(b);
+ const items=watchlistReady&&watchlistOwner&&currentUid===watchlistOwner
+  ?watchlistSuggestions(ownWatchlist):[];
+ watchlistSelect.replaceChildren();
+ const placeholder=document.createElement("option");
+ placeholder.value="";
+ placeholder.textContent="Valitse seurantalistalta ▾";
+ watchlistSelect.append(placeholder);
+ for(const item of items){
+  const option=document.createElement("option");
+  option.value=item.ticker;
+  option.textContent=item.name+" · "+item.ticker;
+  watchlistSelect.append(option);
  }
- suggestions.append(buttons);suggestions.hidden=false;
+ watchlistSelect.value="";
+ watchlistSelect.hidden=!items.length;
+ watchlistSelect.disabled=!items.length;
 }
+watchlistSelect.addEventListener("change",()=>{
+ const ticker=watchlistSelect.value;
+ if(!ticker)return;
+ // Revalidate against the user's currently active list; never start analysis here.
+ const state=window.agentStockSyncState;
+ if(state?.ready&&state.owner===watchlistOwner&&watchlistSuggestions(ownWatchlist).some(item=>item.ticker===ticker)){
+  aiInput.value=ticker;
+ }
+ watchlistSelect.value="";
+});
 document.addEventListener("agent:stocks-loaded",()=>{const state=window.agentStockSyncState;
  if(!state?.owner||!state.ready){watchlistReady=false;ownWatchlist=[];watchlistOwner=null;renderWatchlistSuggestions();return}
  watchlistOwner=state.owner;watchlistReady=true;ownWatchlist=window.agentStockBridge?.get()||[];
@@ -44,8 +58,7 @@ document.addEventListener("agent:stock-change",()=>queueMicrotask(()=>{
  if(!state?.ready||state.owner!==watchlistOwner)return;
  ownWatchlist=window.agentStockBridge?.get()||[];renderWatchlistSuggestions();
 }));
-aiInput.addEventListener("input",renderWatchlistSuggestions);
-db.auth.onAuthStateChange(()=>{watchlistReady=false;watchlistOwner=null;ownWatchlist=[];suggestions.hidden=true;setTimeout(()=>{
+db.auth.onAuthStateChange(()=>{watchlistReady=false;watchlistOwner=null;ownWatchlist=[];renderWatchlistSuggestions();setTimeout(()=>{
  const state=window.agentStockSyncState;if(!state?.ready||!state.owner)return;
  watchlistOwner=state.owner;watchlistReady=true;ownWatchlist=window.agentStockBridge?.get()||[];renderWatchlistSuggestions();
 },0)});
