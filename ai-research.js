@@ -96,6 +96,27 @@ refreshUsage();
 const form=view.querySelector("#research-form");
 form?.insertAdjacentElement("beforebegin",panel);
 const button=panel.querySelector("#ai-stock-submit"),status=panel.querySelector("#ai-stock-status"),result=panel.querySelector("#ai-stock-result");
+const identityChoices=document.createElement("div");
+identityChoices.className="ai-identity-choices";
+identityChoices.setAttribute("aria-label","Valitse oikea osake");
+status.after(identityChoices);
+function showIdentityChoices(payload){
+ identityChoices.replaceChildren();
+ if(payload?.identity_status!=="ambiguous"||!Array.isArray(payload.candidates))return;
+ const intro=document.createElement("p");intro.textContent="Tarkoititko jotakin näistä? Valitse osake, tarkista ticker ja paina sitten Laadi analyysi.";
+ identityChoices.append(intro);
+ for(const item of payload.candidates.slice(0,5)){
+  if(typeof item?.symbol!=="string"||!/^[A-Z0-9^][A-Z0-9.^_-]{0,19}$/.test(item.symbol))continue;
+  const option=document.createElement("button");option.type="button";option.className="secondary-btn";
+  option.style.cssText="margin:4px;max-width:100%;white-space:normal;text-align:left";
+  option.textContent=String(item.name||item.symbol).slice(0,120)+" · "+item.symbol;
+  option.addEventListener("click",()=>{
+   aiInput.value=item.symbol;identityChoices.replaceChildren();aiInput.focus();
+  });
+  identityChoices.append(option);
+ }
+}
+
 const analysisHeader=document.createElement("div");
 analysisHeader.style.cssText="display:none;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 8px";
 analysisHeader.style.display="none";
@@ -290,7 +311,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
  const query=panel.querySelector("#ai-stock-query").value.trim();
  if(query.length<2)return;
  if(!navigator.onLine){status.textContent="AI-analyysi vaatii verkkoyhteyden.";return}
- button.disabled=true;button.textContent="Analyysi käynnissä…";saveButton.disabled=true;currentReport=null;result.textContent="";analysisHeader.style.display="none";status.textContent="Tarkistetaan kirjautuminen...";
+ identityChoices.replaceChildren();button.disabled=true;button.textContent="Analyysi käynnissä…";saveButton.disabled=true;currentReport=null;result.textContent="";analysisHeader.style.display="none";status.textContent="Tarkistetaan kirjautuminen...";
  try{
   const {data:{session},error}=await db.auth.getSession();
   if(error||!session?.access_token){status.textContent="Kirjaudu ensin sisään Asetukset-osiossa.";return}
@@ -302,7 +323,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
    method:"POST",signal:controller.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":"sb_publishable_7wcqNJq1vLpbM_RgkoEyQQ_2VLq9cqE"},body:JSON.stringify({query})
   })}finally{clearTimeout(timeout)}
   const payload=await response.json();
-  if(!response.ok)throw new Error(payload.error||"Palvelinvirhe ("+response.status+")");
+  if(!response.ok){showIdentityChoices(payload);throw new Error(payload.error||"Palvelinvirhe ("+response.status+")")}
   status.textContent="Analyysi valmis · "+new Date(payload.generated_at).toLocaleString("fi-FI")+" · "+describeDataQuality(payload);
   renderAnalysis(payload.analysis||"Analyysiteksti puuttuu.");renderDataQuality(payload);
   if(payload.analysis){analysisTitle.textContent="Analyysi: "+query;showAnalysis()}
