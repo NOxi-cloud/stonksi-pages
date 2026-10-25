@@ -311,7 +311,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
  const query=panel.querySelector("#ai-stock-query").value.trim();
  if(query.length<2)return;
  if(!navigator.onLine){status.textContent="AI-analyysi vaatii verkkoyhteyden.";return}
- identityChoices.replaceChildren();button.disabled=true;button.textContent="Analyysi käynnissä…";saveButton.disabled=true;currentReport=null;result.textContent="";analysisHeader.style.display="none";status.textContent="Tarkistetaan kirjautuminen...";
+ identityChoices.replaceChildren();qualityPanel.replaceChildren();qualityPanel.hidden=true;status.textContent="";saveStatus.textContent="";button.disabled=true;button.textContent="Analyysi käynnissä…";saveButton.disabled=true;currentReport=null;result.textContent="";analysisHeader.style.display="none";status.textContent="Tarkistetaan kirjautuminen...";
  try{
   const {data:{session},error}=await db.auth.getSession();
   if(error||!session?.access_token){status.textContent="Kirjaudu ensin sisään Asetukset-osiossa.";return}
