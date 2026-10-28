@@ -8,7 +8,7 @@ export function financialEvidenceLabel(quality){
   return "Talousraportti: "+period+" lähdeviite (ei vahvistettuja tunnuslukuja)";
  if(quality?.financial_data_status==="dated_snapshot_only"||reports.length)
   return "Talousraportti: "+period+" päivätty tilannekuva (ei tarkistettu uudelleen)";
- return quality?.sec_diagnostic?"SEC-haku ei tuottanut raporttilukuja ("+quality.sec_diagnostic+")":"Talousraportit: ei raporttilukuja saatavilla";
+ return quality?.sec_diagnostic==="verified_sec_xbrl"?"Talousraportti: SEC:n XBRL-tiedot varmennettu":quality?.sec_diagnostic?"SEC-haku ei tuottanut raporttilukuja ("+quality.sec_diagnostic+")":"Talousraportit: ei raporttilukuja saatavilla";
 }
 export function quoteEvidenceLabel(quality){
  if(!quality?.quote_available||!quality.quote_observed_at)return "Kurssihavainto: ei saatavilla";
