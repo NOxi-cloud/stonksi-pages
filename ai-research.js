@@ -249,6 +249,26 @@ function renderDataQuality(payload){
    const p=document.createElement("p");p.textContent=(item.change_pct>0?"+":"")+item.change_pct+" %: "+item.hypothetical_price.toLocaleString("fi-FI",{maximumFractionDigits:4})+" "+(q.quote_currency||"");nested.append(p)}
   details.append(nested);
  }
+ const pe=q.pe_sensitivity;
+ if(pe&&Array.isArray(pe.scenarios)&&pe.scenarios.length===3){
+  const box=document.createElement("section");box.className="ai-pe-panel";
+  const title=document.createElement("h4");title.textContent="Osakekohtainen P/E-herkkyys";
+  const caption=document.createElement("p");caption.textContent="Tilivuoden EPS "+Number(pe.annual_eps).toLocaleString("fi-FI",{maximumFractionDigits:2})+" USD · Havaittu kurssi "+Number(pe.observed_price).toLocaleString("fi-FI",{maximumFractionDigits:2})+" USD";
+  const table=document.createElement("table");table.className="ai-scenario-table";
+  const head=document.createElement("tr");
+  for(const name of ["Skenaario","EPS","P/E","Ehdollinen hinta"]){const th=document.createElement("th");th.textContent=name;head.append(th)}
+  const thead=document.createElement("thead");thead.append(head);table.append(thead);
+  const tbody=document.createElement("tbody");
+  for(const item of pe.scenarios){
+   if(!["Bear","Base","Bull"].includes(item.name)||![item.assumed_eps,item.assumed_pe,item.conditional_price].every(Number.isFinite))continue;
+   const tr=document.createElement("tr");
+   for(const value of [item.name,item.assumed_eps.toLocaleString("fi-FI",{maximumFractionDigits:2})+" USD",item.assumed_pe.toLocaleString("fi-FI",{maximumFractionDigits:1}),item.conditional_price.toLocaleString("fi-FI",{minimumFractionDigits:2,maximumFractionDigits:2})+" USD"]){const td=document.createElement("td");td.textContent=value;tr.append(td)}
+   tbody.append(tr);
+  }
+  table.append(tbody);
+  const note=document.createElement("p");note.textContent="Bear: EPS −10 %, P/E −20 % · Base: ei muutosta · Bull: EPS +10 %, P/E +20 %. Ehdollinen laskelma, ei kurssiennuste tai tavoitehinta.";
+  box.append(title,caption,table,note);details.append(box);
+ }
  qualityPanel.append(details);
 }
 function showAnalysis(){analysisHeader.style.display="flex"}
