@@ -54,3 +54,5 @@
 .ai-scenario-panel{border:1px solid #353c50;border-radius:12px;padding:12px;margin:14px 0;overflow-x:auto}.ai-scenario-panel h4{font-size:15px;margin:0 0 6px}.ai-scenario-panel p{font-size:12px;line-height:1.6}.ai-scenario-table{border-collapse:collapse;width:100%;font-size:12px;margin:10px 0;min-width:400px}.ai-scenario-table th,.ai-scenario-table td{padding:9px 7px;text-align:right;border-bottom:1px solid #353c50;white-space:nowrap}.ai-scenario-table th:first-child,.ai-scenario-table td:first-child{text-align:left;font-weight:650}
 
 .ai-pe-panel{margin-top:16px;border-top:1px solid #353c50;padding-top:12px}.ai-pe-panel h4{margin:6px 0;font-size:14px}.ai-pe-panel p{font-size:12px;line-height:1.5}
+
+.ai-analyst-panel{margin:10px 0;padding:13px;border:1px solid #353c50;border-radius:12px}.ai-analyst-panel p{font-size:13px;line-height:1.5;margin:7px 0}.ai-analyst-panel a{display:inline-block;padding:9px 0;color:#9cc5ff;text-decoration:underline}.ai-analyst-panel .muted{font-size:12px}

@@ -1,3 +1,4 @@
+import {analystSource,ANALYST_SOURCE_FALLBACK} from "./ai-analyst-sources.mjs";
 import {watchlistSuggestions} from "./ai-watchlist-suggestions.mjs";
 import {describeEvidence,stripResearchIdentityBanner} from "./ai-data-quality.mjs";
 import {extractOperatingScenarioBlock,formatScenarioAmount,formatScenarioPercent} from "./ai-scenarios.mjs";
@@ -203,6 +204,20 @@ function renderAnalysis(raw){
  }
 }
 function describeDataQuality(payload){return describeEvidence(payload?.data_quality)}
+const analystPanel=document.createElement("section");
+analystPanel.className="ai-analyst-panel";
+analystPanel.hidden=true;
+analysisHeader.after(analystPanel);
+function renderAnalystSources(symbol){
+ analystPanel.replaceChildren();analystPanel.hidden=false;
+ const head=document.createElement("strong");head.textContent="Analyytikoiden näkemykset";
+ const intro=document.createElement("p");intro.textContent="Vertaa Stonksin laskelmia ulkopuoliseen analyysiin. Suositus ja tavoitehinta tarkistetaan lähteen sivulta.";
+ const source=analystSource(symbol),link=document.createElement("a");
+ link.href=source?.url||ANALYST_SOURCE_FALLBACK;link.target="_blank";link.rel="noopener noreferrer";
+ link.textContent=source?"Avaa "+source.company+" – Inderes":"Etsi yhtiö Inderesin osakevertailusta";
+ const foot=document.createElement("p");foot.className="muted";foot.textContent="Stonksi ei kopioi Inderesin tavoitehintoja eikä väitä niitä ajantasaisiksi. Tarkista suosituksen päivämäärä alkuperäisestä lähteestä.";
+ analystPanel.append(head,intro,link,foot);
+}
 const qualityPanel=document.createElement("section");
 qualityPanel.className="ai-quality-card";qualityPanel.hidden=true;
 qualityPanel.setAttribute("aria-label","Analyysin lähtötiedot");analysisHeader.after(qualityPanel);
@@ -272,7 +287,7 @@ function renderDataQuality(payload){
  qualityPanel.append(details);
 }
 function showAnalysis(){analysisHeader.style.display="flex"}
-closeAnalysis.addEventListener("click",()=>{result.textContent="";status.textContent="";analysisHeader.style.display="none";qualityPanel.hidden=true});
+closeAnalysis.addEventListener("click",()=>{result.textContent="";status.textContent="";analysisHeader.style.display="none";qualityPanel.hidden=true;analystPanel.hidden=true});
 const tools=document.createElement("div");
 tools.style.marginTop="16px";
 tools.innerHTML='<button type="button" id="ai-save-report" disabled>Tallenna analyysi pilveen</button><button type="button" id="ai-load-reports" style="margin-left:8px">Näytä tallennetut</button><p id="ai-save-status" role="status" aria-live="polite"></p><div id="ai-report-list"></div>';
@@ -306,7 +321,7 @@ loadButton.addEventListener("click",async()=>{
  const row=document.createElement("div");row.style.cssText="border-top:1px solid #353c50;padding:12px 0;display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:8px;align-items:start";
  const open=document.createElement("button");open.type="button";open.textContent=report.query+" · "+new Date(report.generated_at).toLocaleString("fi-FI");
  open.style.cssText="min-width:0;max-width:100%;text-align:left;white-space:normal;overflow-wrap:anywhere";
- open.addEventListener("click",()=>{renderAnalysis(report.analysis);renderDataQuality(null);status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI");analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");saveStatus.textContent="";analysisHeader.scrollIntoView({behavior:"smooth",block:"start"})});
+ open.addEventListener("click",()=>{renderAnalysis(report.analysis);renderDataQuality(null);renderAnalystSources(report.query);status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI");analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");saveStatus.textContent="";analysisHeader.scrollIntoView({behavior:"smooth",block:"start"})});
  const menu=document.createElement("details");menu.style.cssText="position:relative;justify-self:end;width:44px";
  const toggle=document.createElement("summary");toggle.textContent="⋮";toggle.setAttribute("aria-label","Analyysin toiminnot: "+report.query);toggle.style.cssText="cursor:pointer;display:grid;place-items:center;width:44px;height:44px;border:1px solid #777;border-radius:8px;background:#303849;color:#fff;font-size:22px;list-style:none";
  menu.append(toggle);
@@ -337,7 +352,7 @@ loadButton.addEventListener("click",async()=>{
   if(!updated?.length){renderAnalysis(payload.analysis);analysisTitle.textContent="Uusi analyysi (tallennus epäonnistui): "+report.query;showAnalysis();throw Error("Uusi analyysi näkyy sivulla mutta ei tallentunut. Älä sulje sivua ennen tekstin kopiointia.");}
   report.analysis=payload.analysis;report.generated_at=generatedAt;
   open.textContent=report.query+" · "+new Date(generatedAt).toLocaleString("fi-FI");
-  renderAnalysis(payload.analysis);renderDataQuality(payload);status.textContent="Päivitetty analyysi · "+new Date(generatedAt).toLocaleString("fi-FI")+" · "+describeDataQuality(payload);
+  renderAnalysis(payload.analysis);renderDataQuality(payload);renderAnalystSources(payload.ticker);status.textContent="Päivitetty analyysi · "+new Date(generatedAt).toLocaleString("fi-FI")+" · "+describeDataQuality(payload);
   analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();
   reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");
   saveStatus.textContent="Analyysi päivitetty ja tallennettu.";analysisHeader.scrollIntoView({behavior:"smooth",block:"start"});
@@ -358,7 +373,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
  const query=panel.querySelector("#ai-stock-query").value.trim();
  if(query.length<2)return;
  if(!navigator.onLine){status.textContent="AI-analyysi vaatii verkkoyhteyden.";return}
- identityChoices.replaceChildren();qualityPanel.replaceChildren();qualityPanel.hidden=true;status.textContent="";saveStatus.textContent="";button.disabled=true;button.textContent="Analyysi käynnissä…";saveButton.disabled=true;currentReport=null;result.textContent="";analysisHeader.style.display="none";status.textContent="Tarkistetaan kirjautuminen...";
+ identityChoices.replaceChildren();qualityPanel.replaceChildren();qualityPanel.hidden=true;analystPanel.hidden=true;status.textContent="";saveStatus.textContent="";button.disabled=true;button.textContent="Analyysi käynnissä…";saveButton.disabled=true;currentReport=null;result.textContent="";analysisHeader.style.display="none";status.textContent="Tarkistetaan kirjautuminen...";
  try{
   const {data:{session},error}=await db.auth.getSession();
   if(error||!session?.access_token){status.textContent="Kirjaudu ensin sisään Asetukset-osiossa.";return}
@@ -372,7 +387,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
   const payload=await response.json();
   if(!response.ok){showIdentityChoices(payload);throw new Error(payload.error||"Palvelinvirhe ("+response.status+")")}
   status.textContent="Analyysi valmis · "+new Date(payload.generated_at).toLocaleString("fi-FI")+" · "+describeDataQuality(payload);
-  renderAnalysis(payload.analysis||"Analyysiteksti puuttuu.");renderDataQuality(payload);
+  renderAnalysis(payload.analysis||"Analyysiteksti puuttuu.");renderDataQuality(payload);renderAnalystSources(payload.ticker);
   if(payload.analysis){analysisTitle.textContent="Analyysi: "+query;showAnalysis()}
   if(payload.analysis){currentReport={query,analysis:payload.analysis,generated_at:payload.generated_at};saveButton.disabled=false}
  }catch(err){status.textContent=err.name==="AbortError"?"Pyyntö aikakatkaistiin.":("Analyysi epäonnistui: "+err.message)}
