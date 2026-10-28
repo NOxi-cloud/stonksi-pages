@@ -209,7 +209,56 @@ analystPanel.hidden=true;
 analysisHeader.after(analystPanel);
 function renderAnalystSources(payload){
  analystPanel.replaceChildren();analystPanel.hidden=true;
+ const opinion=payload?.data_quality?.analyst_opinion;
+ if(opinion&&opinion.provider==="Inderes"&&
+  typeof opinion.source_url==="string"&&typeof opinion.published_at==="string"&&
+  typeof opinion.target_price==="number"&&Number.isFinite(opinion.target_price)&&
+  ["Osta","Lisää","Vähennä","Myy"].includes(opinion.recommendation)&&
+  ["EUR","SEK","NOK","USD","DKK","GBP","CHF"].includes(opinion.currency)){
+  try{
+   const url=new URL(opinion.source_url);
+   const age=(Date.now()-Date.parse(opinion.published_at+"T00:00:00Z"))/86400000;
+   if(url.protocol==="https:"&&["inderes.fi","www.inderes.fi"].includes(url.hostname)&&
+    /^\/(?:en\/)?research\/[^/]+\/?$/.test(url.pathname)&&
+    Number.isFinite(age)&&age>=0&&age<=365){
+    const h=document.createElement("strong");h.textContent="Inderesin analyytikkonäkemys";
+    const value=document.createElement("p");
+    value.textContent="Suositus: "+opinion.recommendation+" · Tavoitehinta: "+
+     opinion.target_price.toLocaleString("fi-FI")+" "+opinion.currency;
+    const date=document.createElement("p");date.className="muted";
+    date.textContent="Julkaistu "+opinion.published_at+
+     " · tekoälyn lähdeviitteestä poimima tieto, varmista alkuperäisestä raportista.";
+    const link=document.createElement("a");link.href=url.href;link.target="_blank";
+    link.rel="noopener noreferrer";link.textContent="Avaa analyysin alkuperäislähde";
+    analystPanel.append(h,value,date,link);
+    const comparison=payload?.data_quality?.analyst_comparison;
+    if(comparison?.status==="comparable"&&
+     typeof comparison.target_difference_pct==="number"&&
+     Number.isFinite(comparison.target_difference_pct)&&
+     typeof comparison.observed_price==="number"&&comparison.observed_price>0){
+     const detail=document.createElement("p");detail.className="muted";
+     detail.textContent="Ero havaittuun kurssiin: "+
+      (comparison.target_difference_pct>0?"+":"")+
+      comparison.target_difference_pct.toLocaleString("fi-FI")+" % (vertailukurssi "+
+      comparison.observed_price.toLocaleString("fi-FI")+" "+opinion.currency+
+      "). Laskennallinen erotus, ei tuottoennuste.";
+     analystPanel.append(detail);
+    }
+    analystPanel.hidden=false;return;
+   }
+  }catch{}
+ }
  const item=payload?.data_quality?.analyst_source;
+ const diagnostic=payload?.data_quality?.analyst_search;
+ if(!item&&diagnostic&&["not_found","unavailable","timeout","rate_limited"].includes(diagnostic.status)){
+  const p=document.createElement("p");p.className="muted";
+  p.textContent=diagnostic.status==="not_found"
+   ?"Inderesin analyysilähdettä ei löytynyt tästä hausta."
+   :diagnostic.status==="rate_limited"?"Inderes-haun käyttöraja tuli vastaan."
+   :"Inderes-lähdehakua ei saatu varmistettua tällä kertaa.";
+  analystPanel.append(p);analystPanel.hidden=false;return;
+ }
+
  if(!item||item.provider!=="Inderes"||typeof item.url!=="string"||typeof item.company!=="string")return;
  try{
   const url=new URL(item.url);
