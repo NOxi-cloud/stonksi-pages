@@ -131,7 +131,7 @@ result.before(analysisHeader);
 function renderAnalysis(raw){
  result.replaceChildren();
  const text=String(raw||"").trim();
- const sections=[];let current={title:"Tiivistelmä",lines:[]};
+ const sections=[];let current={title:"Analyysi",lines:[]};
  for(const line of text.split(/\r?\n/)){
   const m=line.trim().match(/^(?:#{1,4}\s+|\*\*)(.+?)(?:\*\*)?\s*$/);
   const heading=m?.[1]?.replace(/\*\*/g,"").trim();
@@ -201,6 +201,7 @@ function renderDataQuality(payload){
  if(q.quote_available)row("Kurssihavainto: "+fmtDate(q.quote_observed_at)+" · "+(q.quote_source||"epävirallinen lähde")+(q.quote_stale?" · vanhentunut":""));
  else row("Kurssihavaintoa ei saatu.");
  if(Number.isFinite(q.quote_age_hours))row("Kurssihavainnon ikä: "+q.quote_age_hours.toLocaleString("fi-FI")+" tuntia");
+ if(q.sec_diagnostic)row("SEC-haku: "+q.sec_diagnostic+". Tämä ei tarkoita, ettei raportteja olisi julkaistu.");
  if(report){
   row("Raportti: "+(report.source||report.period)+" · "+report.published_at);
   row(status==="verified_official_html"?"Virallinen raporttisisältö tarkistettu tätä analyysiä varten":status==="source_link_only"?"Virallisen raportin lähdeviite, yksittäisiä talouslukuja ei vahvistettu":"Päivätty tilannekuva, ei uudelleentarkistettu");
