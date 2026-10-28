@@ -21,3 +21,7 @@ export function describeEvidence(quality){
  if(!quality)return "Lähdetietoja ei ole saatavilla tästä analyysistä.";
  return quoteEvidenceLabel(quality)+" · "+financialEvidenceLabel(quality);
 }
+
+export function stripResearchIdentityBanner(raw){
+ return String(raw||"").trim().replace(/^Osakeanalyysi:[^\r\n]*(?:\r?\n)*/i,"").trim();
+}

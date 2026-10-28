@@ -1,5 +1,5 @@
 import {watchlistSuggestions} from "./ai-watchlist-suggestions.mjs";
-import {describeEvidence} from "./ai-data-quality.mjs";
+import {describeEvidence,stripResearchIdentityBanner} from "./ai-data-quality.mjs";
 // Research UI: explicit user-triggered AI request, never runs trades.
 const db=window.agentSupabaseClient;
 const view=document.getElementById("view-research");
@@ -130,7 +130,7 @@ analysisHeader.append(analysisTitle,closeAnalysis);
 result.before(analysisHeader);
 function renderAnalysis(raw){
  result.replaceChildren();
- const text=String(raw||"").trim();
+ const text=stripResearchIdentityBanner(raw);
  const sections=[];let current={title:"Analyysi",lines:[]};
  for(const line of text.split(/\r?\n/)){
   const m=line.trim().match(/^(?:#{1,4}\s+|\*\*)(.+?)(?:\*\*)?\s*$/);
@@ -205,7 +205,7 @@ function renderDataQuality(payload){
  if(report){
   row("Raportti: "+(report.source||report.period)+" · "+report.published_at);
   row(status==="verified_official_html"?"Virallinen raporttisisältö tarkistettu tätä analyysiä varten":status==="source_link_only"?"Virallisen raportin lähdeviite, yksittäisiä talouslukuja ei vahvistettu":"Päivätty tilannekuva, ei uudelleentarkistettu");
-  if(report.note)row(report.note);
+  if(report.note){const notes=document.createElement("details"),summary=document.createElement("summary");summary.textContent="Raportin lisähuomautukset";const p=document.createElement("p");p.textContent=report.note;notes.append(summary,p);details.append(notes);}
   if(Array.isArray(report.metrics))for(const metric of report.metrics){if(typeof metric.value==="number"&&Number.isFinite(metric.value))row(metric.label+": "+metric.value.toLocaleString("fi-FI")+" "+metric.unit)}
   for(const [key,caption] of [["net_sales_reported","Liikevaihto"],["operating_profit_reported","Raportoitu liikevoitto"],["operating_profit_comparable","Vertailukelpoinen liikevoitto"]]){
    if(Number.isFinite(report[key]))row(caption+": "+report[key].toLocaleString("fi-FI")+" milj. €");
