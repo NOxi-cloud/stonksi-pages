@@ -1,5 +1,6 @@
 import {watchlistSuggestions} from "./ai-watchlist-suggestions.mjs";
 import {describeEvidence,stripResearchIdentityBanner} from "./ai-data-quality.mjs";
+import {extractOperatingScenarioBlock,formatScenarioAmount,formatScenarioPercent} from "./ai-scenarios.mjs";
 // Research UI: explicit user-triggered AI request, never runs trades.
 const db=window.agentSupabaseClient;
 const view=document.getElementById("view-research");
@@ -173,7 +174,32 @@ function renderAnalysis(raw){
  for(const part of sections){
   const details=document.createElement("details");details.style.cssText="border-top:1px solid #353c50;padding:12px 0";
   const sum=document.createElement("summary");sum.textContent=part.title;sum.style.cssText="cursor:pointer;font-weight:600";
-  details.append(sum,block(part.lines.join("\n")));result.append(details);
+  const original=part.lines.join("\n");
+  const extracted=/^Taloudellinen tilanne ja arvostus/i.test(part.title)?extractOperatingScenarioBlock(original):{text:original,scenario:null};
+  details.append(sum,block(extracted.text));
+  if(extracted.scenario){
+   const info=extracted.scenario;
+   const panel=document.createElement("div");panel.className="ai-scenario-panel";
+   const heading=document.createElement("h4");heading.textContent="Bear / Base / Bull – tulosherkkyydet";
+   const period=document.createElement("p");period.textContent="Laskentakausi: "+info.period;
+   const table=document.createElement("table");table.className="ai-scenario-table";
+   const header=document.createElement("tr");
+   for(const label of ["Skenaario","Liikevaihto","Liikevoitto / tulos","Marginaali"]){const th=document.createElement("th");th.textContent=label;header.append(th)}
+   const thead=document.createElement("thead");thead.append(header);table.append(thead);
+   const tbody=document.createElement("tbody");
+   for(const item of info.rows){
+    const tr=document.createElement("tr");
+    for(const value of [item.name,formatScenarioAmount(item.revenue,info.unit),formatScenarioAmount(item.profit,info.unit),formatScenarioPercent(item.margin,2)+" %"]){
+     const td=document.createElement("td");td.textContent=value;tr.append(td);
+    }
+    tbody.append(tr);
+   }
+   table.append(tbody);
+   const assumptions=document.createElement("p");assumptions.textContent="Oletukset: Bear −10 % liikevaihto / −2 %-yks. marginaali; Base 0 / 0; Bull +10 % / +2 %-yks.";
+   const caveat=document.createElement("p");caveat.textContent="Mekaaninen laskelma, ei tulosennuste, osakekurssin tavoitehinta tai sijoitussuositus.";
+   panel.append(heading,period,table,assumptions,caveat);details.append(panel);
+  }
+  result.append(details);
  }
 }
 function describeDataQuality(payload){return describeEvidence(payload?.data_quality)}
