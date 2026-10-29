@@ -312,7 +312,8 @@ function renderAnalystSources(payload){
   const total=diagnostic?.source_count;
   if(Number.isInteger(cited)&&Number.isInteger(total)&&cited>=0&&total>=0){
    const p=document.createElement("p");p.className="muted";
-   p.textContent="Lähdetarkistus: "+cited+" tutkimusartikkelia / "+total+" lähdeviitettä.";
+   const inderes=diagnostic?.inderes_source_count;
+   p.textContent="Lähdetarkistus: "+cited+" tutkimusartikkelia / "+total+" lähdeviitettä"+(Number.isInteger(inderes)?" (Inderes-lähteitä "+inderes+")":"")+".";
    analystPanel.append(p);
   }
   const reason=diagnostic?.rejection_reason;
