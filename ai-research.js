@@ -322,6 +322,13 @@ function renderAnalystSources(payload){
    const p=document.createElement("p");p.className="muted";
    p.textContent="Julkinen Inderes-lukija: "+(names[publicRead.status]||( /^[a-z_]{1,60}$/.test(publicRead.status)?"Tuntematon tilakoodi: "+publicRead.status:"Ei varmennettua tulosta"))+(Number.isInteger(publicRead.article_count)?" ("+publicRead.article_count+" artikkelilinkkiä)":"")+(Number.isInteger(publicRead.http_status)?" HTTP "+publicRead.http_status:"")+".";
    analystPanel.append(p);
+   const statuses={verified:"Yhtiösivun Seuranta-tiedot varmennettu",section_missing:"Seuranta-osiota ei löytynyt palvelimelle palautetusta HTML:stä",recommendation_label_missing:"Seuranta-osion suosituskenttää ei löytynyt HTML:stä",target_label_missing:"Seuranta-osion tavoitehintakenttää ei löytynyt HTML:stä",date_label_missing:"Seuranta-osion päivityspäivää ei löytynyt HTML:stä",fields_not_verified:"Seuranta-kentät löytyivät, mutta niiden arvoja ei voitu varmentaa"};
+   if(typeof publicRead.profile_status==="string"&&statuses[publicRead.profile_status]){
+    const detail=document.createElement("p");detail.className="muted";detail.textContent="Yhtiösivun tarkistus: "+statuses[publicRead.profile_status]+".";analystPanel.append(detail);
+   }
+   if(typeof publicRead.article_url==="string"&&/^https:\/\/(?:www\.)?inderes\.fi\/(?:en\/)?research\/[^\s?#]+$/.test(publicRead.article_url)){
+    const article=document.createElement("a");article.href=publicRead.article_url;article.target="_blank";article.rel="noopener noreferrer";article.textContent="Avaa lukijan löytämä tutkimusartikkeli";analystPanel.append(article);
+   }
   }
   const reason=diagnostic?.rejection_reason;
   if(typeof reason==="string"&&Object.prototype.hasOwnProperty.call(reasons,reason)){
