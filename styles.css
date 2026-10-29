@@ -69,3 +69,15 @@
  .ai-scenario-panel .ai-scenario-table td:first-child{font-weight:700}
  .ai-scenario-panel .ai-scenario-table td:first-child::before{content:""}
 }
+
+/* Report-backed economic drivers; responsive and explicit source confidence. */
+.ai-driver-panel{border:1px solid #353c50;border-radius:12px;padding:16px;margin:14px 0;min-width:0}
+.ai-driver-panel[hidden]{display:none!important}
+.ai-driver-panel h3{margin:0 0 6px;font-size:17px}
+.ai-driver-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,255px),1fr));gap:12px;margin:13px 0}
+.ai-driver-card{border:1px solid #353c50;background:#1d2232;border-radius:12px;padding:13px;min-width:0;overflow-wrap:anywhere}
+.ai-driver-card h4{margin:0 0 8px;font-size:14px}
+.ai-driver-card p{margin:8px 0;font-size:13px;line-height:1.55}
+.ai-driver-card .ai-driver-finding{font-weight:700;color:#f2f4fb}
+.ai-driver-card .ai-driver-monitor{color:#b9c2db}
+.ai-driver-panel>a{display:inline-block;color:#9cc5ff;text-decoration:underline;margin:5px 0;overflow-wrap:anywhere}
