@@ -308,6 +308,13 @@ function renderAnalystSources(payload){
    currency_invalid:"Tavoitehinnan valuuttaa ei voitu varmentaa.",
    evidence_invalid:"Tavoitehinnan ja suosituksen perustelutieto ei läpäissyt tarkistusta."
   };
+  const cited=diagnostic?.research_source_count;
+  const total=diagnostic?.source_count;
+  if(Number.isInteger(cited)&&Number.isInteger(total)&&cited>=0&&total>=0){
+   const p=document.createElement("p");p.className="muted";
+   p.textContent="Lähdetarkistus: "+cited+" tutkimusartikkelia / "+total+" lähdeviitettä.";
+   analystPanel.append(p);
+  }
   const reason=diagnostic?.rejection_reason;
   if(typeof reason==="string"&&Object.prototype.hasOwnProperty.call(reasons,reason)){
    const p=document.createElement("p");p.className="muted";p.textContent=reasons[reason];
