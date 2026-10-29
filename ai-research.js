@@ -256,6 +256,10 @@ function renderAnalystSources(payload){
    ?"Inderesin analyysilähdettä ei löytynyt tästä hausta."
    :diagnostic.status==="rate_limited"?"Inderes-haun käyttöraja tuli vastaan."
    :"Inderes-lähdehakua ei saatu varmistettua tällä kertaa.";
+  if(diagnostic.http_status===400){
+   const bits=[diagnostic.error_code,diagnostic.error_param].filter(x=>typeof x==="string"&&/^[A-Za-z0-9_.\\[\\]-]{1,100}$/.test(x));
+   if(bits.length)p.textContent+=" API: "+bits.join(" / ");
+  }
   analystPanel.append(p);analystPanel.hidden=false;return;
  }
 
