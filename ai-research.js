@@ -129,6 +129,17 @@ closeAnalysis.textContent="Sulje";
 closeAnalysis.setAttribute("aria-label","Sulje analyysi");
 analysisHeader.append(analysisTitle,closeAnalysis);
 result.before(analysisHeader);
+// Display-only conversion: keep underlying report and evidence unchanged.
+function compactSummaryMillions(value){
+ return String(value||"").replace(/\b(\d{4,9})(?:[ \u00a0]+)(miljoonaa|miljoonan|miljoonaan|miljoonasta|miljoonassa)([ \u00a0]+)(euroa|eur|usd|dollaria)\b/gi,(full,digits,caseWord,space,currency)=>{
+  const n=Number(digits);
+  if(!Number.isFinite(n)||n<1000)return full;
+  const billions=(n/1000).toLocaleString("fi-FI",{maximumFractionDigits:3});
+  const word=caseWord.toLowerCase();
+  const suffix=word==="miljoonan"?"miljardin":word==="miljoonaan"?"miljardiin":word==="miljoonasta"?"miljardista":word==="miljoonassa"?"miljardissa":"miljardia";
+  return billions+" "+suffix+space+currency;
+ });
+}
 function renderAnalysis(raw){
  result.replaceChildren();
  const text=stripResearchIdentityBanner(raw);
@@ -165,12 +176,12 @@ function renderAnalysis(raw){
  if(sections.length<2){
   const paragraphs=text.split(/\n\s*\n/).filter(Boolean);
   if(paragraphs.length<2){result.append(block(text));return}
-  const intro=document.createElement("section");const label=document.createElement("strong");label.textContent="Tiivistelmä";intro.append(label,block(paragraphs[0]));result.append(intro);
+  const intro=document.createElement("section");const label=document.createElement("strong");label.textContent="Tiivistelmä";intro.append(label,block(compactSummaryMillions(paragraphs[0])));result.append(intro);
   const details=document.createElement("details");details.style.marginTop="14px";const sum=document.createElement("summary");sum.textContent="Näytä koko analyysi";sum.style.cursor="pointer";details.append(sum,block(paragraphs.slice(1).join("\n\n")));result.append(details);return;
  }
  const index=sections.findIndex(x=>/tiivistelmä|yhteenveto/i.test(x.title));
  const intro=sections.splice(index>=0?index:0,1)[0];
- const title=document.createElement("strong");title.textContent="Tiivistelmä";result.append(title,block(intro.lines.join("\n")));
+ const title=document.createElement("strong");title.textContent="Tiivistelmä";result.append(title,block(compactSummaryMillions(intro.lines.join("\n"))));
  for(const part of sections){
   const details=document.createElement("details");details.style.cssText="border-top:1px solid #353c50;padding:12px 0";
   const sum=document.createElement("summary");sum.textContent=part.title;sum.style.cssText="cursor:pointer;font-weight:600";
@@ -301,7 +312,10 @@ function renderAnalystSources(payload){
   if(typeof reason==="string"&&Object.prototype.hasOwnProperty.call(reasons,reason)){
    const p=document.createElement("p");p.className="muted";p.textContent=reasons[reason];
    analystPanel.append(title,explanation,p,link);
-  }else analystPanel.append(title,explanation,link);
+  }else{
+   const p=document.createElement("p");p.className="muted";p.textContent="Varmennettua tavoitehintaa tai suositusta ei löytynyt tästä hausta.";
+   analystPanel.append(title,explanation,p,link);
+  }
   analystPanel.hidden=false;
  }catch{return}
 }
