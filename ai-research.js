@@ -316,6 +316,13 @@ function renderAnalystSources(payload){
    p.textContent="Lähdetarkistus: "+cited+" tutkimusartikkelia / "+total+" lähdeviitettä"+(Number.isInteger(inderes)?" (Inderes-lähteitä "+inderes+")":"")+".";
    analystPanel.append(p);
   }
+  const publicRead=diagnostic?.public_read;
+  if(publicRead&&typeof publicRead.status==="string"){
+   const names={skipped:"Ei käynnistynyt",profile_unavailable:"Yhtiösivun haku epäonnistui",no_article_links:"Yhtiösivulta ei löytynyt tutkimuslinkkejä",article_not_verified:"Tutkimusartikkelin tietoja ei voitu varmentaa",fetch_failed:"Julkisen sivun haku epäonnistui",verified:"Julkinen tutkimusartikkeli varmennettu"};
+   const p=document.createElement("p");p.className="muted";
+   p.textContent="Julkinen Inderes-lukija: "+(names[publicRead.status]||"Ei varmennettua tulosta")+(Number.isInteger(publicRead.article_count)?" ("+publicRead.article_count+" artikkelilinkkiä)":"")+(Number.isInteger(publicRead.http_status)?" HTTP "+publicRead.http_status:"")+".";
+   analystPanel.append(p);
+  }
   const reason=diagnostic?.rejection_reason;
   if(typeof reason==="string"&&Object.prototype.hasOwnProperty.call(reasons,reason)){
    const p=document.createElement("p");p.className="muted";p.textContent=reasons[reason];
