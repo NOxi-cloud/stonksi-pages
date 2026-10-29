@@ -283,7 +283,23 @@ function renderAnalystSources(payload){
   const explanation=document.createElement("p");explanation.textContent="Löydetty yhtiön analyysilähde. Tarkista tavoitehinta, suositus ja niiden päivämäärä alkuperäiseltä sivulta.";
   const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";
   link.textContent="Avaa "+item.company+" – Inderes";
-  analystPanel.append(title,explanation,link);analystPanel.hidden=false;
+  const reasons={
+   research_url_invalid:"Tutkimusartikkelin osoitetta ei voitu vahvistaa.",
+   research_issuer_mismatch:"Tutkimusartikkelia ei voitu yhdistää oikeaan yhtiöön.",
+   research_not_cited:"Tutkimusartikkeli ei sisältynyt haun varmennettuihin lähdeviitteisiin.",
+   date_invalid:"Tutkimusartikkelin julkaisupäivä puuttui tai oli virheellinen.",
+   date_out_of_range:"Tutkimusartikkelin päiväys ei täyttänyt tuoreusvaatimusta.",
+   recommendation_invalid:"Analyytikkosuositusta ei voitu varmentaa.",
+   target_price_invalid:"Tavoitehintaa ei voitu varmentaa.",
+   currency_invalid:"Tavoitehinnan valuuttaa ei voitu varmentaa.",
+   evidence_invalid:"Tavoitehinnan ja suosituksen perustelutieto ei läpäissyt tarkistusta."
+  };
+  const reason=diagnostic?.rejection_reason;
+  if(typeof reason==="string"&&Object.prototype.hasOwnProperty.call(reasons,reason)){
+   const p=document.createElement("p");p.className="muted";p.textContent=reasons[reason];
+   analystPanel.append(title,explanation,p,link);
+  }else analystPanel.append(title,explanation,link);
+  analystPanel.hidden=false;
  }catch{return}
 }
 const qualityPanel=document.createElement("section");
