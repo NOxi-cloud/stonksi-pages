@@ -285,6 +285,9 @@ function renderAnalystSources(payload){
   link.textContent="Avaa "+item.company+" – Inderes";
   const reasons={
    research_url_invalid:"Tutkimusartikkelin osoitetta ei voitu vahvistaa.",
+   research_retry_unavailable:"Tutkimusartikkelin erillinen haku epäonnistui.",
+   research_retry_incomplete:"Tutkimusartikkelin erillinen haku jäi kesken.",
+   research_retry_failed:"Tutkimusartikkelin erillinen haku ei vastannut.",
    research_issuer_mismatch:"Tutkimusartikkelia ei voitu yhdistää oikeaan yhtiöön.",
    research_not_cited:"Tutkimusartikkeli ei sisältynyt haun varmennettuihin lähdeviitteisiin.",
    date_invalid:"Tutkimusartikkelin julkaisupäivä puuttui tai oli virheellinen.",
