@@ -252,7 +252,7 @@ function renderAnalystSources(payload){
  const diagnostic=payload?.data_quality?.analyst_search;
  if(!item&&diagnostic&&["not_found","unavailable","timeout","rate_limited"].includes(diagnostic.status)){
   const p=document.createElement("p");p.className="muted";
-  p.textContent=diagnostic.status==="not_found"
+  p.textContent=diagnostic.status==="timeout"?"Inderes-haku aikakatkaistiin.":diagnostic.http_status===400?"Inderes-haun API-pyyntö hylättiin (400).":diagnostic.http_status===429?"Inderes-haun API-käyttöraja (429).":diagnostic.status==="not_found"
    ?"Inderesin analyysilähdettä ei löytynyt tästä hausta."
    :diagnostic.status==="rate_limited"?"Inderes-haun käyttöraja tuli vastaan."
    :"Inderes-lähdehakua ei saatu varmistettua tällä kertaa.";
