@@ -387,6 +387,26 @@ function renderDataQuality(payload){
    const p=document.createElement("p");p.textContent=(item.change_pct>0?"+":"")+item.change_pct+" %: "+item.hypothetical_price.toLocaleString("fi-FI",{maximumFractionDigits:4})+" "+(q.quote_currency||"");nested.append(p)}
   details.append(nested);
  }
+ const own=q.independent_price_scenarios;
+ if(own&&own.status==="assumption_based_price_scenarios_not_analyst_target"&&own.currency==="USD"&&Array.isArray(own.scenarios)&&own.scenarios.length===3){
+  const box=document.createElement("section");box.className="ai-pe-panel";
+  const heading=document.createElement("h4");heading.textContent="Stonksin oma 12 kk arvostusskenaario (ei analyytikon tavoitehinta)";
+  const description=document.createElement("p");description.textContent="Historiallinen vapaa kassavirta "+Number(own.annual_fcf_million_usd).toLocaleString("fi-FI")+" milj. USD; osakemäärä "+Number(own.share_count).toLocaleString("fi-FI")+" (SEC "+own.shares_as_of+").";
+  const table=document.createElement("table");table.className="ai-scenario-table";
+  const head=document.createElement("tr");
+  for(const label of ["Skenaario","FCF-muutos","P/FCF","Ehdollinen osakehinta"]){const th=document.createElement("th");th.textContent=label;head.append(th)}
+  const thead=document.createElement("thead");thead.append(head);table.append(thead);
+  const tbody=document.createElement("tbody");
+  for(const item of own.scenarios){
+   if(!["Bear","Base","Bull"].includes(item.name)||![item.fcf_growth_pct,item.assumed_p_fcf,item.conditional_price].every(Number.isFinite))continue;
+   const tr=document.createElement("tr");
+   for(const value of [item.name,item.fcf_growth_pct+" %",String(item.assumed_p_fcf),item.conditional_price.toLocaleString("fi-FI",{minimumFractionDigits:2,maximumFractionDigits:2})+" USD"]){const td=document.createElement("td");td.textContent=value;tr.append(td)}
+   tbody.append(tr);
+  }
+  table.append(tbody);
+  const note=document.createElement("p");note.textContent=own.caveat;
+  box.append(heading,description,table,note);details.append(box);
+ }
  const pe=q.pe_sensitivity;
  if(pe&&Array.isArray(pe.scenarios)&&pe.scenarios.length===3){
   const box=document.createElement("section");box.className="ai-pe-panel";
