@@ -320,7 +320,7 @@ function renderAnalystSources(payload){
   if(publicRead&&typeof publicRead.status==="string"){
    const names={skipped:"Ei käynnistynyt",profile_unavailable:"Yhtiösivun haku epäonnistui",no_article_links:"Yhtiösivulta ei löytynyt tutkimuslinkkejä",article_not_verified:"Tutkimusartikkelin tietoja ei voitu varmentaa",article_date_missing:"Artikkelin julkaisupäivää ei tunnistettu",article_values_missing:"Artikkelista ei tunnistettu tavoitehintaa ja suositusta",article_conflicting_values:"Artikkelissa on ristiriitaisia tavoitehinta- tai suositustietoja",article_evidence_rejected:"Artikkelin tietojen varmennus hylkäsi tuloksen",article_unavailable:"Tutkimusartikkelin lataus epäonnistui",article_fetch_failed:"Tutkimusartikkelin verkkohaku epäonnistui",fetch_failed:"Julkisen sivun haku epäonnistui",verified:"Julkinen tutkimusartikkeli varmennettu"};
    const p=document.createElement("p");p.className="muted";
-   p.textContent="Julkinen Inderes-lukija: "+(names[publicRead.status]||"Ei varmennettua tulosta")+(Number.isInteger(publicRead.article_count)?" ("+publicRead.article_count+" artikkelilinkkiä)":"")+(Number.isInteger(publicRead.http_status)?" HTTP "+publicRead.http_status:"")+".";
+   p.textContent="Julkinen Inderes-lukija: "+(names[publicRead.status]||( /^[a-z_]{1,60}$/.test(publicRead.status)?"Tuntematon tilakoodi: "+publicRead.status:"Ei varmennettua tulosta"))+(Number.isInteger(publicRead.article_count)?" ("+publicRead.article_count+" artikkelilinkkiä)":"")+(Number.isInteger(publicRead.http_status)?" HTTP "+publicRead.http_status:"")+".";
    analystPanel.append(p);
   }
   const reason=diagnostic?.rejection_reason;
