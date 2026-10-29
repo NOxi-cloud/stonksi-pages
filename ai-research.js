@@ -200,8 +200,9 @@ function renderAnalysis(raw){
    const tbody=document.createElement("tbody");
    for(const item of info.rows){
     const tr=document.createElement("tr");
-    for(const value of [item.name,formatScenarioAmount(item.revenue,info.unit),formatScenarioAmount(item.profit,info.unit),formatScenarioPercent(item.margin,2)+" %"]){
-     const td=document.createElement("td");td.textContent=value;tr.append(td);
+    const values=[item.name,formatScenarioAmount(item.revenue,info.unit),formatScenarioAmount(item.profit,info.unit),formatScenarioPercent(item.margin,2)+" %"];
+    for(const [index,value] of values.entries()){
+     const td=document.createElement("td");td.textContent=value;td.dataset.label=["Skenaario","Liikevaihto","Liikevoitto / tulos","Marginaali"][index];tr.append(td);
     }
     tbody.append(tr);
    }
@@ -313,7 +314,6 @@ function renderDataQuality(payload){
  }else row("Varmennettuja talousraporttitietoja ei ole.");
  const checks=q.financial_checks;
  if(checks)row("Marginaalitarkistus: "+(checks.reported_margin_matches&&checks.comparable_margin_matches?"Täsmää pyöristystarkkuudella":"Epäselvä, tarkistettava")+" · liikevoiton erotus "+checks.operating_profit_adjustment_million_eur+" milj. €");
- if(q.report_fetch?.attempted?.length)row("Raporttien tarkistusyrityksiä: "+q.report_fetch.attempted.length);
  const series=Array.isArray(q.price_sensitivity)?q.price_sensitivity:[];
  if(series.length){const nested=document.createElement("details"),sum=document.createElement("summary");sum.textContent="Hintaherkkyys ±10 % ja ±20 % (ei ennuste)";nested.append(sum);
   for(const item of series){if(!Number.isFinite(item.change_pct)||!Number.isFinite(item.hypothetical_price))continue;

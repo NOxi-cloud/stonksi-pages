@@ -56,3 +56,16 @@
 .ai-pe-panel{margin-top:16px;border-top:1px solid #353c50;padding-top:12px}.ai-pe-panel h4{margin:6px 0;font-size:14px}.ai-pe-panel p{font-size:12px;line-height:1.5}
 
 .ai-analyst-panel{margin:10px 0;padding:13px;border:1px solid #353c50;border-radius:12px}.ai-analyst-panel p{font-size:13px;line-height:1.5;margin:7px 0}.ai-analyst-panel a{display:inline-block;padding:9px 0;color:#9cc5ff;text-decoration:underline}.ai-analyst-panel .muted{font-size:12px}
+
+/* Mobile research scenario cards: preserve every metric without horizontal scrolling. */
+@media(max-width:600px){
+ .ai-scenario-panel{overflow-x:visible;min-width:0}
+ .ai-scenario-panel .ai-scenario-table{display:block;width:100%;min-width:0;font-size:13px}
+ .ai-scenario-panel .ai-scenario-table thead{display:none}
+ .ai-scenario-panel .ai-scenario-table tbody{display:grid;gap:10px}
+ .ai-scenario-panel .ai-scenario-table tr{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;padding:10px;border:1px solid #353c50;border-radius:10px}
+ .ai-scenario-panel .ai-scenario-table td{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:3px 0;border:0;white-space:normal;text-align:right;overflow-wrap:anywhere}
+ .ai-scenario-panel .ai-scenario-table td::before{content:attr(data-label);color:#a9b0c3;text-align:left;font-weight:400}
+ .ai-scenario-panel .ai-scenario-table td:first-child{font-weight:700}
+ .ai-scenario-panel .ai-scenario-table td:first-child::before{content:""}
+}
