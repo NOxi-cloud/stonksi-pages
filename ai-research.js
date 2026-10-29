@@ -259,85 +259,18 @@ function renderAnalystSources(payload){
    }
   }catch{}
  }
+ // No verified analyst opinion: diagnostics remain in server data for debugging,
+ // but search failures, parser states and citation counts are not investment facts.
  const item=payload?.data_quality?.analyst_source;
- const diagnostic=payload?.data_quality?.analyst_search;
- if(!item&&diagnostic&&["not_found","unavailable","timeout","rate_limited"].includes(diagnostic.status)){
-  const p=document.createElement("p");p.className="muted";
-  p.textContent=diagnostic.status==="timeout"?"Inderes-haku aikakatkaistiin.":diagnostic.http_status===400?"Inderes-haun API-pyyntö hylättiin (400).":diagnostic.http_status===429?"Inderes-haun API-käyttöraja (429).":diagnostic.status==="not_found"
-   ?"Inderesin analyysilähdettä ei löytynyt tästä hausta."
-   :diagnostic.status==="rate_limited"?"Inderes-haun käyttöraja tuli vastaan."
-   :"Inderes-lähdehakua ei saatu varmistettua tällä kertaa.";
-  if(diagnostic.http_status===400){
-   const bits=[diagnostic.error_code,diagnostic.error_param].filter(x=>typeof x==="string"&&/^[A-Za-z0-9_.\\[\\]-]{1,100}$/.test(x));
-   if(bits.length)p.textContent+=" API: "+bits.join(" / ");
-  }
-  if(diagnostic.status==="not_found"){
-   const reasons={
-    no_citations:"Hakupalvelu ei palauttanut varmennettuja lähdeviitteitä.",
-    issuer_not_matched:"Lähteitä löytyi, mutta yhtiösivua ei voitu yhdistää tähän osakkeeseen.",
-    empty_response:"Hakupalvelu ei palauttanut analysoitavaa vastausta.",
-    oversized_response:"Hakupalvelun vastaus ylitti sallitun koon.",
-    invalid_json:"Hakupalvelun vastaus ei ollut kelvollista JSON-muotoa.",
-    opinion_not_verified:"Yhtiösivu löytyi, mutta tavoitehintaa ei voitu varmentaa."
-   };
-   if(typeof reasons[diagnostic.rejection_reason]==="string")p.textContent+=" "+reasons[diagnostic.rejection_reason];
-  }
-  analystPanel.append(p);analystPanel.hidden=false;return;
- }
-
  if(!item||item.provider!=="Inderes"||typeof item.url!=="string"||typeof item.company!=="string")return;
  try{
   const url=new URL(item.url);
   if(url.protocol!=="https:"||!["inderes.fi","www.inderes.fi"].includes(url.hostname)||
    !/^\/(?:en\/)?companies\/[^/]+\/?$/.test(url.pathname))return;
-  const title=document.createElement("strong");title.textContent="Analyytikoiden näkemykset";
-  const explanation=document.createElement("p");explanation.textContent="Löydetty yhtiön analyysilähde. Tarkista tavoitehinta, suositus ja niiden päivämäärä alkuperäiseltä sivulta.";
+  const title=document.createElement("strong");title.textContent="Inderesin yhtiösivu";
   const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";
   link.textContent="Avaa "+item.company+" – Inderes";
-  const reasons={
-   research_url_invalid:"Tutkimusartikkelin osoitetta ei voitu vahvistaa.",
-   research_retry_unavailable:"Tutkimusartikkelin erillinen haku epäonnistui.",
-   research_retry_incomplete:"Tutkimusartikkelin erillinen haku jäi kesken.",
-   research_retry_failed:"Tutkimusartikkelin erillinen haku ei vastannut.",
-   research_issuer_mismatch:"Tutkimusartikkelia ei voitu yhdistää oikeaan yhtiöön.",
-   research_not_cited:"Tutkimusartikkeli ei sisältynyt haun varmennettuihin lähdeviitteisiin.",
-   date_invalid:"Tutkimusartikkelin julkaisupäivä puuttui tai oli virheellinen.",
-   date_out_of_range:"Tutkimusartikkelin päiväys ei täyttänyt tuoreusvaatimusta.",
-   recommendation_invalid:"Analyytikkosuositusta ei voitu varmentaa.",
-   target_price_invalid:"Tavoitehintaa ei voitu varmentaa.",
-   currency_invalid:"Tavoitehinnan valuuttaa ei voitu varmentaa.",
-   evidence_invalid:"Tavoitehinnan ja suosituksen perustelutieto ei läpäissyt tarkistusta."
-  };
-  const cited=diagnostic?.research_source_count;
-  const total=diagnostic?.source_count;
-  if(Number.isInteger(cited)&&Number.isInteger(total)&&cited>=0&&total>=0){
-   const p=document.createElement("p");p.className="muted";
-   const inderes=diagnostic?.inderes_source_count;
-   p.textContent="Lähdetarkistus: "+cited+" tutkimusartikkelia / "+total+" lähdeviitettä"+(Number.isInteger(inderes)?" (Inderes-lähteitä "+inderes+")":"")+".";
-   analystPanel.append(p);
-  }
-  const publicRead=diagnostic?.public_read;
-  if(publicRead&&typeof publicRead.status==="string"){
-   const names={skipped:"Ei käynnistynyt",profile_unavailable:"Yhtiösivun haku epäonnistui",no_article_links:"Yhtiösivulta ei löytynyt tutkimuslinkkejä",article_not_verified:"Tutkimusartikkelin tietoja ei voitu varmentaa",article_date_missing:"Artikkelin julkaisupäivää ei tunnistettu",article_content_missing:"Artikkelin julkinen HTML ei sisällä analyysitekstiä",article_price_missing:"Artikkelista ei tunnistettu tavoitehintaa",article_recommendation_missing:"Artikkelista ei tunnistettu suositusta",article_price_and_recommendation_missing:"Artikkelista ei tunnistettu tavoitehintaa eikä suositusta",article_values_missing:"Artikkelista ei tunnistettu tavoitehintaa ja suositusta",article_conflicting_values:"Artikkelissa on ristiriitaisia tavoitehinta- tai suositustietoja",article_evidence_rejected:"Artikkelin tietojen varmennus hylkäsi tuloksen",article_unavailable:"Tutkimusartikkelin lataus epäonnistui",article_fetch_failed:"Tutkimusartikkelin verkkohaku epäonnistui",fetch_failed:"Julkisen sivun haku epäonnistui",verified_profile:"Inderesin yhtiösivun Seuranta-tiedot varmennettu",verified:"Julkinen tutkimusartikkeli varmennettu"};
-   const p=document.createElement("p");p.className="muted";
-   p.textContent="Julkinen Inderes-lukija: "+(names[publicRead.status]||( /^[a-z_]{1,60}$/.test(publicRead.status)?"Tuntematon tilakoodi: "+publicRead.status:"Ei varmennettua tulosta"))+(Number.isInteger(publicRead.article_count)?" ("+publicRead.article_count+" artikkelilinkkiä)":"")+(Number.isInteger(publicRead.http_status)?" HTTP "+publicRead.http_status:"")+".";
-   analystPanel.append(p);
-   const statuses={verified:"Yhtiösivun Seuranta-tiedot varmennettu",section_missing:"Seuranta-osiota ei löytynyt palvelimelle palautetusta HTML:stä",recommendation_label_missing:"Seuranta-osion suosituskenttää ei löytynyt HTML:stä",target_label_missing:"Seuranta-osion tavoitehintakenttää ei löytynyt HTML:stä",date_label_missing:"Seuranta-osion päivityspäivää ei löytynyt HTML:stä",recommendation_value_unparsed:"Suosituksen arvoa ei tunnistettu Seuranta-osiosta",target_value_unparsed:"Tavoitehinnan arvoa tai valuuttaa ei tunnistettu Seuranta-osiosta",date_value_unparsed:"Päivityspäivän muotoa ei tunnistettu Seuranta-osiosta",values_rejected_by_validation:"Seuranta-arvot löytyivät, mutta päivämäärä tai arvorajat hylättiin",fields_not_verified:"Seuranta-kentät löytyivät, mutta niiden arvoja ei voitu varmentaa"};
-   if(typeof publicRead.profile_status==="string"&&statuses[publicRead.profile_status]){
-    const detail=document.createElement("p");detail.className="muted";detail.textContent="Yhtiösivun tarkistus: "+statuses[publicRead.profile_status]+".";analystPanel.append(detail);
-   }
-   if(typeof publicRead.article_url==="string"&&/^https:\/\/(?:www\.)?inderes\.fi\/(?:en\/)?research\/[^\s?#]+$/.test(publicRead.article_url)){
-    const article=document.createElement("a");article.href=publicRead.article_url;article.target="_blank";article.rel="noopener noreferrer";article.textContent="Avaa lukijan löytämä tutkimusartikkeli";analystPanel.append(article);
-   }
-  }
-  const reason=diagnostic?.rejection_reason;
-  if(typeof reason==="string"&&Object.prototype.hasOwnProperty.call(reasons,reason)){
-   const p=document.createElement("p");p.className="muted";p.textContent=reasons[reason];
-   analystPanel.append(title,explanation,p,link);
-  }else{
-   const p=document.createElement("p");p.className="muted";p.textContent="Varmennettua tavoitehintaa tai suositusta ei löytynyt tästä hausta.";
-   analystPanel.append(title,explanation,p,link);
-  }
+  analystPanel.append(title,link);
   analystPanel.hidden=false;
  }catch{return}
 }
