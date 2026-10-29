@@ -260,6 +260,17 @@ function renderAnalystSources(payload){
    const bits=[diagnostic.error_code,diagnostic.error_param].filter(x=>typeof x==="string"&&/^[A-Za-z0-9_.\\[\\]-]{1,100}$/.test(x));
    if(bits.length)p.textContent+=" API: "+bits.join(" / ");
   }
+  if(diagnostic.status==="not_found"){
+   const reasons={
+    no_citations:"Hakupalvelu ei palauttanut varmennettuja lähdeviitteitä.",
+    issuer_not_matched:"Lähteitä löytyi, mutta yhtiösivua ei voitu yhdistää tähän osakkeeseen.",
+    empty_response:"Hakupalvelu ei palauttanut analysoitavaa vastausta.",
+    oversized_response:"Hakupalvelun vastaus ylitti sallitun koon.",
+    invalid_json:"Hakupalvelun vastaus ei ollut kelvollista JSON-muotoa.",
+    opinion_not_verified:"Yhtiösivu löytyi, mutta tavoitehintaa ei voitu varmentaa."
+   };
+   if(typeof reasons[diagnostic.rejection_reason]==="string")p.textContent+=" "+reasons[diagnostic.rejection_reason];
+  }
   analystPanel.append(p);analystPanel.hidden=false;return;
  }
 
