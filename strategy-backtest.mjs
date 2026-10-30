@@ -11,7 +11,6 @@ export function backtestSwingHistory(raw,maxCases=35){
   // Analyze only information available by 20:00 Helsinki local time that date.
   const date=new Date(rows[index].t*1000);
   const dateString=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Helsinki",year:"numeric",month:"2-digit",day:"2-digit"}).format(date);
-  const clock=Date.parse(dateString+"T20:00:00+02:00");
   // Historical daylight saving changes make exact clock unreliable; use 23:59 UTC
   // of the observation date solely for this retrospective check.
   const receivedAt=Date.parse(date.toISOString().slice(0,10)+"T23:59:00Z");
