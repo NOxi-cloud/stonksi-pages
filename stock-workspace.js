@@ -1,4 +1,5 @@
 import {calculateTechnicalSignals} from "./stock-signals.mjs";
+import {renderResearchPriorities} from "./stock-research-priorities.mjs";
 import {renderSignalSummary} from "./stock-signal-summary.mjs";
 import {getCachedDaily,storeCachedDaily} from "./stock-history-cache.mjs";
 // User-initiated stock discovery, quote updates and cloud-synced positions. No trades.
@@ -42,6 +43,9 @@ const signalRows=make("div",undefined,"watchlist-signal-grid");
 const valuationButton=make("button","Näytä tallennetut arvostukset","secondary-btn");valuationButton.type="button";
 const valuationStatus=make("p","","muted");
 const valuationRows=make("div",undefined,"signal-summary-ranking");
+const valuationLookup=new Map();
+const priorityHost=make("section",undefined,"watchlist-signal-summary");
+const refreshPriorities=()=>renderResearchPriorities(priorityHost,signalResults,valuationLookup,stocks());
 valuationButton.addEventListener("click",async()=>{
  valuationButton.disabled=true;valuationRows.replaceChildren();
  valuationStatus.textContent="Haetaan vain aiemmin tallennetut yritysanalyysit. Ei AI-kutsuja.";
@@ -56,6 +60,8 @@ valuationButton.addEventListener("click",async()=>{
    if(snap?.schema_version!==1||typeof snap.ticker!=="string"||!target||!["verified_analyst_target","conditional_model_price"].includes(target.kind)||!Number.isFinite(target.price)||target.price<=0||typeof target.currency!=="string")continue;
    const ticker=snap.ticker.trim().toUpperCase();if(!latest.has(ticker))latest.set(ticker,{target,date:report.generated_at});
   }
+  valuationLookup.clear();for(const [ticker,value] of latest)valuationLookup.set(ticker,value);
+  refreshPriorities();
   let n=0;
   for(const item of stocks().slice(0,30)){
    const match=latest.get(item.ticker.toUpperCase());if(!match)continue;n++;
@@ -78,9 +84,9 @@ valuationButton.addEventListener("click",async()=>{
 });
 const signalSummary=make("div",undefined,"watchlist-signal-summary");
 const signalResults=new Map();
-const refreshSignalSummary=()=>renderSignalSummary(signalResults,signalSummary,Math.min(stocks().filter(x=>validSymbol(x.ticker)).length,30));
+const refreshSignalSummary=()=>{renderSignalSummary(signalResults,signalSummary,Math.min(stocks().filter(x=>validSymbol(x.ticker)).length,30));refreshPriorities()};
 signalActions.append(signalButton,signalReset);
-signalPanel.append(signalTitle,signalHelp,signalActions,signalStatus,signalSummary,signalRows,valuationButton,valuationStatus,valuationRows);
+signalPanel.append(signalTitle,signalHelp,signalActions,signalStatus,signalSummary,priorityHost,signalRows,valuationButton,valuationStatus,valuationRows);
 refreshSignalSummary();
 let signalOffset=0,signalRun=0,signalBusy=false;
 signalReset.addEventListener("click",()=>{signalRun++;signalOffset=0;signalRows.replaceChildren();signalResults.clear();refreshSignalSummary();signalStatus.textContent="Valmis uuteen hakuun.";signalBusy=false;signalButton.disabled=false;});
