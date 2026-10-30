@@ -629,11 +629,11 @@ loadButton.addEventListener("click",async()=>{
  if(error)throw error;
  reportList.replaceChildren();
  for(const report of data){
- const row=document.createElement("div");row.className="ai-saved-report-row";
+ const row=document.createElement("div");row.className="ai-saved-report-row";row.style.setProperty("display","grid","important");row.style.gridTemplateColumns="minmax(0,1fr) 48px";row.style.alignItems="center";row.style.columnGap="10px";row.style.width="100%";row.style.boxSizing="border-box";
  const open=document.createElement("button");open.type="button";open.textContent=report.query+" · "+new Date(report.generated_at).toLocaleString("fi-FI");
- open.className="ai-saved-report-open";
+ open.className="ai-saved-report-open";open.style.setProperty("display","block","important");open.style.setProperty("width","100%","important");open.style.setProperty("background","#171d2c","important");open.style.setProperty("color","#f2f4fa","important");open.style.border="1px solid #353c50";open.style.borderRadius="9px";open.style.padding="12px";open.style.textAlign="left";open.style.minWidth="0";open.style.whiteSpace="normal";
  open.addEventListener("click",()=>{const restored=restoreAnalysisSnapshot(report);renderAnalysis(report.analysis,restored);renderDataQuality(restored);renderAnalystSources(restored);renderFinancialDrivers(restored);if(!restored)saveStatus.textContent="Vanha tallenne sisältää vain tekstin. Arvostustiedot palautuvat uusiin tallennuksiin.";status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI")+(restored?" · Arvostustiedot tallennettu":" · Vanha tekstitallenne: arvostustietoja ei tallennettu");analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");saveStatus.textContent="";analysisHeader.scrollIntoView({behavior:"smooth",block:"start"})});
- const menu=document.createElement("details");menu.className="ai-saved-report-menu";
+ const menu=document.createElement("details");menu.className="ai-saved-report-menu";menu.style.position="relative";menu.style.justifySelf="end";menu.style.width="44px";
  const toggle=document.createElement("summary");toggle.textContent="⋮";toggle.setAttribute("aria-label","Analyysin toiminnot: "+report.query);toggle.style.cssText="cursor:pointer;display:grid;place-items:center;width:44px;height:44px;border:1px solid #777;border-radius:8px;background:#303849;color:#fff;font-size:22px;list-style:none";
  menu.append(toggle);
  const actions=document.createElement("div");actions.className="ai-saved-report-actions";
