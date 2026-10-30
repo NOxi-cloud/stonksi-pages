@@ -338,6 +338,13 @@ function renderDataQuality(payload){
   }
   qualityPanel.append(card);
  }
+ const eur=q.helsinki_eur_valuation;
+ if(eur&&eur.status==="awaiting_verified_eur_valuation_inputs"&&Array.isArray(eur.missing)){
+  const note=document.createElement("details");note.className="ai-quality-details";
+  const heading=document.createElement("summary");heading.textContent="EUR-arvostus: puuttuvat varmennukset";
+  const p=document.createElement("p");p.textContent="Omaa EUR-tavoitehintaa ei lasketa ilman varmennettua vuotuista kassavirtaa, osakelajia/osakemäärää ja hyväksyttyjä vertailukertoimia.";
+  note.append(heading,p);qualityPanel.append(note);
+ }
  const h=document.createElement("strong");h.textContent="Lähtötietojen yhteenveto";qualityPanel.append(h);
  const fmtDate=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?"Aika puuttuu":d.toLocaleString("fi-FI",{dateStyle:"short",timeStyle:"short"})};
  const summary=document.createElement("div");summary.className="ai-quality-summary";
