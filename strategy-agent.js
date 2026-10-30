@@ -73,5 +73,5 @@ function render(){
  for(const x of records.filter(x=>x.type==="thesis").slice(-12).reverse())thesisList.append(e("p",x.ticker+" · "+x.thesis+" · Kumoutuu: "+x.invalidates,"muted"));
  }draw();
 }
-db.auth.onAuthStateChange((_evt,session)=>{const next=session?.user?.id||null;if(next===uid)return;uid=next;records=[];settings={day:1000,long:5000,risk:.5,maxDayLoss:25};if(uid)restore();render();if(uid)syncTheses();if(uid)syncTheses()});
-const {data:{session}}=await db.auth.getSession();uid=session?.user?.id||null;if(uid)restore();render();
+db.auth.onAuthStateChange((_evt,session)=>{const next=session?.user?.id||null;if(next===uid)return;uid=next;records=[];settings={day:1000,long:5000,risk:.5,maxDayLoss:25};if(uid)restore();render();if(uid)syncTheses()});
+const {data:{session}}=await db.auth.getSession();uid=session?.user?.id||null;if(uid)restore();render();if(uid)syncTheses();
