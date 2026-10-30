@@ -55,6 +55,7 @@ export function renderSignalHistory(host,items){
  const heading=document.createElement("h4");heading.textContent="Signaalien historia";host.append(heading);
  const note=document.createElement("p");note.className="muted";note.textContent="Tallennetaan tämän laitteen selaimeen vain käynnistämiesi laskentojen havainnot. 5/10/20 kaupankäyntipäivän kurssimuutokset täyttyvät seuraavan käyttäjän käynnistämän historiahaun yhteydessä. Ei sisällä osinkoja eikä kuluja.";host.append(note);
  if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="Ei havaintoja vielä.";host.append(p);return}
+ const counts=document.createElement("p");counts.className="muted";counts.textContent=[5,10,20].map(n=>n+" pv valmistuneet "+items.filter(x=>Number.isFinite(x.outcomes?.[n])).length+"/"+items.length).join(" · ");host.append(counts);
  const list=document.createElement("div");list.className="signal-summary-ranking";
  const ordered=[...items].sort((a,b)=>Date.parse(b.recordedAt)-Date.parse(a.recordedAt)).slice(0,30);
  for(const x of ordered){
