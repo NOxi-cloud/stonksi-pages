@@ -1,4 +1,4 @@
-import {summarizeSignalHistory} from "./stock-signal-metrics.mjs";
+import {summarizeSignalHistory,summarizeSignalSegments} from "./stock-signal-metrics.mjs";
 // User-initiated observations; kept on this device and scoped to signed-in user.
 // No network traffic, AI calls, automated price checks or trade execution.
 const MAX_RECORDS=250;
@@ -78,6 +78,21 @@ export function renderSignalHistory(host,items){
  const explanation=document.createElement("p");explanation.className="muted";
  explanation.textContent="Suuntaosuma: nousevan trendin jälkeen kurssi nousi tai laskevan trendin jälkeen laski. Neutraalit trendit ja keskeneräiset havainnot eivät vaikuta osumaprosenttiin. Keskiarvo sisältää kaikki valmiit havainnot. Ei osinkoja, veroja tai kuluja.";
  host.append(explanation);
+ const section=document.createElement("details");section.className="signal-priority-details";
+ const title=document.createElement("summary");title.textContent="Vertaa trendin, MACD:n ja RSI:n mukaan";section.append(title);
+ const selection=document.createElement("select");selection.setAttribute("aria-label","Vertailun aikaväli");
+ for(const n of [5,10,20]){const option=document.createElement("option");option.value=String(n);option.textContent=n+" kaupankäyntipäivää";if(n===20)option.selected=true;selection.append(option)}
+ const report=document.createElement("div");report.className="signal-summary-ranking";section.append(selection,report);
+ const draw=()=>{report.replaceChildren();for(const block of summarizeSignalSegments(items,Number(selection.value))){
+  const card=document.createElement("article");card.className="signal-summary-entry";
+  const name=document.createElement("strong");name.textContent=block.title;card.append(name);
+  for(const group of block.groups){const line=document.createElement("small");line.className="muted";
+   line.textContent=group.label+": "+group.count+" havaintoa / "+group.uniqueTickers+" osaketta · keskiarvo "+(group.mean===null?"—":group.mean.toLocaleString("fi-FI",{maximumFractionDigits:2})+" %")+(group.smallSample?" · pieni otos":"");card.append(line)}
+  report.append(card)
+ }};
+ selection.addEventListener("change",draw);draw();host.append(section);
+ const caution=document.createElement("p");caution.className="muted";
+ caution.textContent="Ryhmät kuvaavat osakkeiden omia signaalitilanteita, eivät koko markkinan nousu- tai laskukautta. Tulokset voivat sisältää samojen osakkeiden toistuvia havaintoja.";host.append(caution);
  const list=document.createElement("div");list.className="signal-summary-ranking";
  const ordered=[...items].sort((a,b)=>Date.parse(b.recordedAt)-Date.parse(a.recordedAt)).slice(0,30);
  for(const x of ordered){
