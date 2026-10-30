@@ -117,3 +117,42 @@ if(stonksiVersionBadge){
  document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkStonksiVersion()});
  setInterval(()=>{if(!document.hidden)checkStonksiVersion()},300000);
 }
+
+
+/* Cloud status watchdog: do not leave a misleading permanent loading indicator
+   if the Supabase module fails to load or session startup stalls. */
+(() => {
+ const indicator=document.getElementById("sync-indicator");
+ const sidebar=document.getElementById("sidebar-sync-status");
+ const feature=document.getElementById("cloud-feature-status");
+ if(!indicator)return;
+ let lastState=indicator.dataset.state||"connecting";
+ const render=()=>{
+  const state=indicator.dataset.state||"connecting";
+  const label=document.getElementById("sync-label")?.textContent||"";
+  if(feature){
+   const names={connecting:"Yhdistetään…",synced:"Synkronoitu",syncing:"Synkronoidaan…",pending:"Muutoksia jonossa",error:"Synkronointivirhe",offline:"Ei verkkoyhteyttä",local:"Ei kirjautunut"};
+   feature.textContent=names[state]||label||"Tuntematon tila";
+   feature.classList.toggle("connected",state==="synced");
+   feature.classList.toggle("pending",state!=="synced");
+  }
+  if(lastState!==state)lastState=state;
+ };
+ new MutationObserver(render).observe(indicator,{attributes:true,attributeFilter:["data-state"]});
+ render();
+ const watchdog=()=>{
+  if(indicator.dataset.state!=="connecting"||!navigator.onLine)return;
+  indicator.dataset.state="error";
+  const syncLabel=document.getElementById("sync-label");
+  if(syncLabel)syncLabel.textContent="Yhteystarkistus keskeytyi";
+  if(sidebar){
+   sidebar.dataset.state="error";
+   const title=document.getElementById("sidebar-sync-title");
+   const detail=document.getElementById("sidebar-sync-detail");
+   if(title)title.textContent="Yhteystarkistus keskeytyi";
+   if(detail)detail.textContent="Tarkista yhteys ja lataa sivu uudelleen";
+  }
+  render();
+ };
+ window.setTimeout(watchdog,15000);
+})();
