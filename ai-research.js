@@ -261,46 +261,19 @@ analystPanel.hidden=true;
 analysisHeader.after(analystPanel);
 function renderAnalystSources(payload){
  analystPanel.replaceChildren();analystPanel.hidden=true;
- const opinion=payload?.data_quality?.analyst_opinion;
- if(opinion&&opinion.provider==="Inderes"&&
-  typeof opinion.source_url==="string"&&typeof opinion.published_at==="string"&&
-  typeof opinion.target_price==="number"&&Number.isFinite(opinion.target_price)&&
-  ["Osta","Lisää","Vähennä","Myy"].includes(opinion.recommendation)&&
-  ["EUR","SEK","NOK","USD","DKK","GBP","CHF"].includes(opinion.currency)){
-  try{
-   const url=new URL(opinion.source_url);
-   const age=(Date.now()-Date.parse(opinion.published_at+"T00:00:00Z"))/86400000;
-   if(url.protocol==="https:"&&["inderes.fi","www.inderes.fi"].includes(url.hostname)&&
-    /^\/(?:en\/)?research\/[^/]+\/?$/.test(url.pathname)&&
-    Number.isFinite(age)&&age>=0&&age<=365){
-    const h=document.createElement("strong");h.textContent="Inderesin analyytikkonäkemys";
-    const value=document.createElement("p");
-    value.textContent="Suositus: "+opinion.recommendation+" · Tavoitehinta: "+
-     opinion.target_price.toLocaleString("fi-FI")+" "+opinion.currency;
-    const date=document.createElement("p");date.className="muted";
-    date.textContent="Julkaistu "+opinion.published_at+
-     " · tekoälyn lähdeviitteestä poimima tieto, varmista alkuperäisestä raportista.";
-    const link=document.createElement("a");link.href=url.href;link.target="_blank";
-    link.rel="noopener noreferrer";link.textContent="Avaa analyysin alkuperäislähde";
-    analystPanel.append(h,value,date,link);
-    analystPanel.hidden=false;return;
-   }
-  }catch{}
- }
- // No verified analyst opinion: diagnostics remain in server data for debugging,
- // but search failures, parser states and citation counts are not investment facts.
- const item=payload?.data_quality?.analyst_source;
- if(!item||item.provider!=="Inderes"||typeof item.url!=="string"||typeof item.company!=="string")return;
+ const item=payload?.data_quality?.inderes_company_link;
+ if(item?.status!=="verified_public_profile"||typeof item.url!=="string")return;
  try{
   const url=new URL(item.url);
-  if(url.protocol!=="https:"||!["inderes.fi","www.inderes.fi"].includes(url.hostname)||
-   !/^\/(?:en\/)?companies\/[^/]+\/?$/.test(url.pathname))return;
-  const title=document.createElement("strong");title.textContent="Inderesin yhtiösivu";
-  const link=document.createElement("a");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";
-  link.textContent="Avaa "+item.company+" – Inderes";
-  analystPanel.append(title,link);
-  analystPanel.hidden=false;
- }catch{return}
+  if(url.protocol!=="https:"||url.hostname!=="www.inderes.fi"||
+     !url.pathname.startsWith("/companies/")||url.pathname.length>160)return;
+  const h=document.createElement("strong");h.textContent="Inderesin yhtiösivu";
+  const p=document.createElement("p");p.className="muted";
+  p.textContent="Avaa Inderesin osakesivu. Premium-analyysien tavoitehintoja tai suosituksia ei haeta Stonksiin.";
+  const link=document.createElement("a");link.href=url.href;link.target="_blank";
+  link.rel="noopener noreferrer";link.textContent="Avaa yhtiösivu Inderesissä";
+  analystPanel.append(h,p,link);analystPanel.hidden=false;
+ }catch{}
 }
 const qualityPanel=document.createElement("section");
 qualityPanel.className="ai-quality-card";qualityPanel.hidden=true;
