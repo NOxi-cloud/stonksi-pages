@@ -118,15 +118,13 @@ if(stonksiVersionBadge){
  setInterval(()=>{if(!document.hidden)checkStonksiVersion()},300000);
 }
 
-
-/* Cloud status watchdog: do not leave a misleading permanent loading indicator
-   if the Supabase module fails to load or session startup stalls. */
+/* Cloud startup status watchdog: displays failures without claiming a successful sync.
+   Normal Supabase state updates can still replace the error when connection recovers. */
 (() => {
  const indicator=document.getElementById("sync-indicator");
  const sidebar=document.getElementById("sidebar-sync-status");
  const feature=document.getElementById("cloud-feature-status");
  if(!indicator)return;
- let lastState=indicator.dataset.state||"connecting";
  const render=()=>{
   const state=indicator.dataset.state||"connecting";
   const label=document.getElementById("sync-label")?.textContent||"";
@@ -136,23 +134,20 @@ if(stonksiVersionBadge){
    feature.classList.toggle("connected",state==="synced");
    feature.classList.toggle("pending",state!=="synced");
   }
-  if(lastState!==state)lastState=state;
  };
  new MutationObserver(render).observe(indicator,{attributes:true,attributeFilter:["data-state"]});
  render();
- const watchdog=()=>{
+ window.setTimeout(()=>{
   if(indicator.dataset.state!=="connecting"||!navigator.onLine)return;
   indicator.dataset.state="error";
-  const syncLabel=document.getElementById("sync-label");
-  if(syncLabel)syncLabel.textContent="Yhteystarkistus keskeytyi";
+  const label=document.getElementById("sync-label");
+  if(label)label.textContent="Yhteystarkistus viivästyy";
   if(sidebar){
    sidebar.dataset.state="error";
-   const title=document.getElementById("sidebar-sync-title");
-   const detail=document.getElementById("sidebar-sync-detail");
-   if(title)title.textContent="Yhteystarkistus keskeytyi";
-   if(detail)detail.textContent="Tarkista yhteys ja lataa sivu uudelleen";
+   const title=document.getElementById("sidebar-sync-title"),detail=document.getElementById("sidebar-sync-detail");
+   if(title)title.textContent="Yhteystarkistus viivästyy";
+   if(detail)detail.textContent="Tarkista yhteys ja tarvittaessa päivitä sivu";
   }
   render();
- };
- window.setTimeout(watchdog,15000);
+ },20000);
 })();

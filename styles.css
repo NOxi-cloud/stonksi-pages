@@ -101,3 +101,14 @@
 #view-research .panel{min-width:0;overflow-wrap:anywhere}
 #view-research #research-list .task-row{min-width:0}
 #view-research textarea{max-width:100%;min-width:0}
+
+/* Sidebar sync state: never leave the warning-colored dot on successful sync. */
+#sidebar-sync-status[data-state="synced"] .connection-dot{background:var(--green)}
+#sidebar-sync-status[data-state="error"] .connection-dot{background:var(--red)}
+#sidebar-sync-status[data-state="syncing"] .connection-dot{background:var(--accent)}
+#sidebar-sync-status[data-state="local"] .connection-dot{background:var(--muted)}
+#sidebar-sync-status[data-state="connecting"] .connection-dot,
+#sidebar-sync-status[data-state="pending"] .connection-dot,
+#sidebar-sync-status[data-state="offline"] .connection-dot{background:var(--amber)}
+.ai-price-target-card[data-available="false"]{border-color:var(--border)}
+.ai-price-target-card .ai-price-target-change{font-weight:600;margin:6px 0 0}

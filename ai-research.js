@@ -324,19 +324,42 @@ function renderDataQuality(payload){
  if(!q){qualityPanel.hidden=true;return}
  qualityPanel.hidden=false;
  const target=payload?.data_quality?.price_target_view;
- if(target&&["verified_analyst_target","conditional_model_price"].includes(target.kind)&&
+ const targetIsAvailable=target&&["verified_analyst_target","conditional_model_price"].includes(target.kind)&&
    typeof target.price==="number"&&Number.isFinite(target.price)&&target.price>0&&
-   ["EUR","USD","SEK","NOK","DKK","GBP","CHF"].includes(target.currency)){
+   ["EUR","USD","SEK","NOK","DKK","GBP","CHF"].includes(target.currency);
+ if(targetIsAvailable){
   const card=document.createElement("div");card.className="ai-price-target-card";
   const h=document.createElement("strong");h.textContent=target.kind==="verified_analyst_target"?"Analyytikon tavoitehinta":"Stonksin laskennallinen Base-arvo";
   const price=document.createElement("p");price.className="ai-price-target-number";
   price.textContent=target.price.toLocaleString("fi-FI",{minimumFractionDigits:2,maximumFractionDigits:2})+" "+target.currency;
   const note=document.createElement("p");note.textContent=target.kind==="conditional_model_price"?"Ehdollinen P/FCF-arvo – ei vahvistettu 12 kk tavoitehinta tai kurssiennuste.":String(target.note||"Varmennettu analyytikon arvio.").slice(0,250);
   card.append(h,price,note);
+  const own=q.independent_price_scenarios;
+  if(target.kind==="conditional_model_price"&&own?.status==="assumption_based_price_scenarios_not_analyst_target"&&
+     own.currency===target.currency&&q.quote_currency===target.currency&&q.quote_available===true&&q.quote_stale===false&&
+     typeof q.quote_observed_at==="string"&&own.observed_at===q.quote_observed_at&&
+     Number.isFinite(q.quote_age_hours)&&q.quote_age_hours>=0&&q.quote_age_hours<=96&&
+     Number.isFinite(own.observed_price)&&own.observed_price>0&&
+     Number.isFinite(own.base_case_price)&&Math.abs(own.base_case_price-target.price)<0.011){
+    const change=(target.price/own.observed_price-1)*100;
+    if(Number.isFinite(change)&&Math.abs(change)<=10000){
+     const compare=document.createElement("p");compare.className="ai-price-target-change";
+     compare.textContent="Verrattuna saman analyysin havaintokurssiin "+
+      own.observed_price.toLocaleString("fi-FI",{minimumFractionDigits:2,maximumFractionDigits:2})+" "+
+      target.currency+": "+(change>=0?"+":"")+change.toLocaleString("fi-FI",{maximumFractionDigits:1,minimumFractionDigits:1})+" % (ehdollinen).";
+     card.append(compare);
+    }
+  }
   if(target.kind==="verified_analyst_target"&&typeof target.source_url==="string"){
    try{const u=new URL(target.source_url);if(u.protocol==="https:"&&["inderes.fi","www.inderes.fi"].includes(u.hostname)){const link=document.createElement("a");link.href=u.href;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Avaa alkuperäinen analyysi";card.append(link)}}catch{}
   }
   qualityPanel.append(card);
+ }else{
+  const card=document.createElement("div");card.className="ai-price-target-card";card.dataset.available="false";
+  const heading=document.createElement("strong");heading.textContent="Tavoitehinta ei vielä saatavilla";
+  const note=document.createElement("p");
+  note.textContent="Varmennettua analyytikon tavoitehintaa tai turvallisesti laskettavaa osakekohtaista arvoa ei ole saatavilla. Stonksi ei täytä puuttuvia arvoja arvauksilla.";
+  card.append(heading,note);qualityPanel.append(card);
  }
  const eur=q.helsinki_eur_valuation;
  if(eur&&eur.status==="awaiting_verified_eur_valuation_inputs"&&Array.isArray(eur.missing)){

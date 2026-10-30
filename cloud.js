@@ -59,10 +59,10 @@ function setIndicator(state,label){
  const title=document.getElementById("sidebar-sync-title"),detail=document.getElementById("sidebar-sync-detail");
  const descriptions={
   connecting:["Yhdistetään…","Tarkistetaan pilviyhteyttä"],
-  synced:["Pilviyhteys toimii","Tiedot synkronoitu"],
-  syncing:["Synkronoidaan…","Siirretään muutoksia pilveen"],
+  synced:["Pilviyhteys toimii","Tehtävät synkronoitu"],
+  syncing:["Synkronoidaan…","Siirretään tehtäviä pilveen"],
   pending:["Synkronointi odottaa",label],
-  error:["Synkronointivirhe","Pilvitietojen lataus epäonnistui – tarkista asetukset"],
+  error:["Synkronointivirhe","Pilvitietojen lataus tai tallennus epäonnistui"],
   offline:["Ei verkkoyhteyttä","Muutokset odottavat verkkoa"],
   local:["Paikallinen tila","Kirjaudu sisään synkronoidaksesi"]
  };
@@ -118,7 +118,7 @@ async function onSession(session){
  document.querySelector('label[for="cloud-password"]').hidden=!!user;
  if(!user){window.agentTaskBridge?.disable();message("Ei kirjautunut – tehtävät pysyvät paikallisina.");return;}
  const uid=user.id;const cached=readJSON(cacheKey(uid),null);
- if(cached){window.agentTaskBridge?.set(overlay(cached,pending(uid)));ready=true;}
+ if(cached){window.agentTaskBridge?.set(overlay(cached,pending(uid)));} // Välimuisti ei ole vahvistus pilviyhteydestä.
  message("Ladataan pilvitehtäviä…");
  if(!navigator.onLine){message("Offline-tila: muutokset tallentuvat jonoon.");return;}
  try{await loadCloud(uid,version);if(version!==sessionVersion||user?.id!==uid)return;ready=true;syncIndicator();await flushQueue();}catch(e){if(version===sessionVersion){syncError=e;message("Pilvilataus epäonnistui: "+e.message+(cached?" – paikalliset tehtävät käytössä.":""));}}
