@@ -1,4 +1,5 @@
 import {calculateTechnicalSignals} from "./stock-signals.mjs";
+import {makeSignalObservation,loadSignalHistory,saveSignalHistory,renderSignalHistory} from "./stock-signal-history.mjs";
 import {renderResearchPriorities} from "./stock-research-priorities.mjs";
 import {renderSignalSummary} from "./stock-signal-summary.mjs";
 import {getCachedDaily,storeCachedDaily} from "./stock-history-cache.mjs";
@@ -40,6 +41,9 @@ const signalButton=make("button","Laske 5 seuraavan osakkeen signaalit","seconda
 const signalReset=make("button","Aloita alusta","secondary-btn");signalReset.type="button";
 const signalStatus=make("p","", "muted");signalStatus.setAttribute("role","status");
 const signalRows=make("div",undefined,"watchlist-signal-grid");
+const historyHost=make("section",undefined,"watchlist-signal-summary");
+const historyButton=make("button","Näytä signaalihistoria","secondary-btn");historyButton.type="button";
+historyButton.addEventListener("click",async()=>{const {data:{session}}=await db.auth.getSession();if(!session?.user?.id){signalStatus.textContent="Kirjaudu sisään.";return}renderSignalHistory(historyHost,loadSignalHistory(session.user.id))});
 const valuationButton=make("button","Näytä tallennetut arvostukset","secondary-btn");valuationButton.type="button";
 const valuationStatus=make("p","","muted");
 const valuationRows=make("div",undefined,"signal-summary-ranking");
@@ -85,8 +89,8 @@ valuationButton.addEventListener("click",async()=>{
 const signalSummary=make("div",undefined,"watchlist-signal-summary");
 const signalResults=new Map();
 const refreshSignalSummary=()=>{renderSignalSummary(signalResults,signalSummary,Math.min(stocks().filter(x=>validSymbol(x.ticker)).length,30));refreshPriorities()};
-signalActions.append(signalButton,signalReset);
-signalPanel.append(signalTitle,signalHelp,signalActions,signalStatus,signalSummary,priorityHost,signalRows,valuationButton,valuationStatus,valuationRows);
+signalActions.append(signalButton,signalReset,historyButton);
+signalPanel.append(signalTitle,signalHelp,signalActions,signalStatus,signalSummary,priorityHost,signalRows,historyHost,valuationButton,valuationStatus,valuationRows);
 refreshSignalSummary();
 let signalOffset=0,signalRun=0,signalBusy=false;
 signalReset.addEventListener("click",()=>{signalRun++;signalOffset=0;signalRows.replaceChildren();signalResults.clear();refreshSignalSummary();signalStatus.textContent="Valmis uuteen hakuun.";signalBusy=false;signalButton.disabled=false;});
@@ -127,6 +131,7 @@ signalButton.addEventListener("click",async()=>{
     if(ownRun!==signalRun)break;
     const result=calculateTechnicalSignals(raw);
     signalResults.set(item.id,{item,result});
+    if(result){const observation=makeSignalObservation(item,result);if(observation)saveSignalHistory(session.user.id,[observation]);}
     signalRows.append(signalCard(item,result,"RSI- ja trenditietoja ei voitu laskea."));
     refreshSignalSummary();
    }catch(error){if(ownRun===signalRun){signalResults.set(item.id,{item,result:null});signalRows.append(signalCard(item,null,"Haku epäonnistui: "+error.message));refreshSignalSummary()}}
