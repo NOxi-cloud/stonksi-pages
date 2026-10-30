@@ -87,3 +87,17 @@
 .ai-assumption-provenance{border-top:1px solid #353c50;margin-top:12px;padding-top:12px;overflow-wrap:anywhere}.ai-assumption-provenance p{margin:8px 0}.ai-assumption-provenance a{color:#9cc5ff;text-decoration:underline}
 
 .ai-price-target-card{border:1px solid #4b5a76;border-radius:12px;margin:12px 0;padding:14px;overflow-wrap:anywhere}.ai-price-target-number{font-weight:750;font-size:clamp(23px,5vw,32px);margin:7px 0}.ai-price-target-card p{line-height:1.5}.ai-price-target-card a{color:#9cc5ff}
+
+/* Consistent desktop research workspace. Mobile and tablet stay stacked. */
+#view-research{min-width:0}
+@media(min-width:1101px){
+ #view-research.active{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+ #view-research>.page-heading{grid-column:1/-1;margin-bottom:0}
+ #view-research>#research-form{grid-column:1;max-width:none;width:100%;margin:0}
+ #view-research>#research-form+.panel{grid-column:2;margin:0;min-width:0}
+ #view-research>#research-form+.panel+.panel{grid-column:1/-1;margin:0}
+ #view-research>.ai-research-workspace{grid-column:1/-1;max-width:none;width:100%;margin:0}
+}
+#view-research .panel{min-width:0;overflow-wrap:anywhere}
+#view-research #research-list .task-row{min-width:0}
+#view-research textarea{max-width:100%;min-width:0}

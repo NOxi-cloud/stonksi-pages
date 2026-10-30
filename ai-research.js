@@ -8,7 +8,7 @@ import {normalizedScenarioAssumptions} from "./ai-scenario-assumptions.mjs";
 const db=window.agentSupabaseClient;
 const view=document.getElementById("view-research");
 const panel=document.createElement("section");
-panel.className="panel form-panel";
+panel.className="panel form-panel ai-research-workspace";
 panel.innerHTML='<h2>AI-osaketutkimus (testi)</h2><p class="muted">Kirjoita yhtiön nimi tai ticker ja käynnistä analyysi halutessasi. Talouslukujen saatavuus riippuu yhtiöstä ja lähteistä. AI-analyysi kuluttaa käyttökiintiötä ja voi aiheuttaa API-kuluja.</p><form id="ai-stock-form"><label for="ai-stock-query">Yhtiö tai ticker</label><input id="ai-stock-query" maxlength="160" minlength="2" required placeholder="Esim. Nokia" style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:8px 0 12px;background:#10141f;color:#fff;border:1px solid #353c50;border-radius:8px"><div class="ai-analysis-actions"><button class="primary-btn" id="ai-stock-submit" type="submit">Laadi analyysi</button></div></form><p id="ai-stock-status" role="status" aria-live="polite"></p><div id="ai-stock-result" style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6"></div>';
 const usage=document.createElement("div");
 usage.style.cssText="margin:12px 0 20px";
