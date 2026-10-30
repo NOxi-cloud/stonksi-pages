@@ -192,3 +192,6 @@
 .signal-performance-card{gap:8px}
 .signal-performance-card strong{font-size:1rem}
 .signal-performance-card small{line-height:1.4}
+
+/* Company source discovery */
+.company-source-panel{min-width:0}.company-source-form{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}.company-source-form input{flex:1 1 210px;min-width:0;padding:11px;border-radius:9px}.company-source-detail{padding:12px 0;border-top:1px solid var(--border);min-width:0}.company-source-detail h5{margin:0 0 10px;font-size:1rem}.company-source-field{display:grid;grid-template-columns:minmax(110px,34%) minmax(0,1fr);gap:8px;padding:5px 0;overflow-wrap:anywhere}.company-source-field span{color:var(--muted)}.company-source-card,.company-source-filing{padding:14px;border:1px solid var(--border);border-radius:11px;margin:12px 0;min-width:0;overflow-wrap:anywhere}.company-source-saved-rows{display:flex;flex-wrap:wrap;gap:8px}.company-source-saved-rows button{text-align:left;white-space:normal}.company-source-results [hidden]{display:none!important}@media(max-width:600px){.company-source-field{grid-template-columns:1fr;gap:1px}.company-source-form button{flex:1 1 135px}}
