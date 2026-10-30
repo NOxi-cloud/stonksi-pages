@@ -1,3 +1,4 @@
+import {marketValuationContext} from "./ai-valuation-context.mjs";
 import {createAnalysisSnapshot,restoreAnalysisSnapshot} from "./ai-saved-snapshot.mjs";
 import {watchlistSuggestions} from "./ai-watchlist-suggestions.mjs";
 import {describeEvidence,stripResearchIdentityBanner} from "./ai-data-quality.mjs";
@@ -295,6 +296,7 @@ function renderDataQuality(payload){
   const price=document.createElement("p");price.className="ai-price-target-number";
   price.textContent=target.price.toLocaleString("fi-FI",{minimumFractionDigits:2,maximumFractionDigits:2})+" "+target.currency;
   const note=document.createElement("p");note.textContent=target.kind==="conditional_model_price"?"Ehdollinen P/FCF-arvo – ei vahvistettu 12 kk tavoitehinta tai kurssiennuste.":String(target.note||"Varmennettu analyytikon arvio.").slice(0,250);
+  if(target.kind==="conditional_model_price"){h.textContent="Oletusmallin Base-herkkyys (ei tavoitehinta)";}
   card.append(h,price,note);
   // The exact analyst opinion has already passed server-side issuer and citation checks.
   // Verify the quote/target pairing again before presenting a percentage in the main card.
@@ -326,8 +328,23 @@ function renderDataQuality(payload){
    sourceDate.textContent="Analyytikon arvion päiväys: "+target.published_at+" · lähdetieto tarkistettava ennen kaupankäyntiä.";
    card.append(sourceDate);
   }
+  const market=marketValuationContext(q,target);
+  if(market){
+   const comparison=document.createElement("div");comparison.className="ai-market-context";
+   const caption=document.createElement("strong");caption.textContent="Mitä markkinahinta edellyttää?";
+   const line=document.createElement("p");
+   line.textContent="Havaittu kurssi "+market.observedPrice.toLocaleString("fi-FI",{minimumFractionDigits:2,maximumFractionDigits:2})+" USD · implisiittinen historiallinen P/FCF "+
+     market.impliedPfcf.toLocaleString("fi-FI",{maximumFractionDigits:1})+"×.";
+   const expectations=document.createElement("p");
+   expectations.textContent="Jotta nykykurssi vastaisi 15×-kerrointa, FCF/osake muutos olisi "+
+     (market.requiredFcfChangePctAt15x>=0?"+":"")+market.requiredFcfChangePctAt15x.toLocaleString("fi-FI",{maximumFractionDigits:1})+
+     " %. 20×-kertoimella "+(market.requiredFcfChangePctAt20x>=0?"+":"")+
+     market.requiredFcfChangePctAt20x.toLocaleString("fi-FI",{maximumFractionDigits:1})+" %.";
+   const caveat=document.createElement("p");caveat.className="muted";caveat.textContent=market.disclaimer;
+   comparison.append(caption,line,expectations,caveat);card.append(comparison);
+  }
   const own=q.independent_price_scenarios;
-  if(target.kind==="conditional_model_price"&&own?.status==="assumption_based_price_scenarios_not_analyst_target"&&
+  if(!market&&target.kind==="conditional_model_price"&&own?.status==="assumption_based_price_scenarios_not_analyst_target"&&
     Number.isFinite(own.annual_fcf_per_share)&&own.annual_fcf_per_share>0&&
     Number.isFinite(own.observed_price)&&own.observed_price>0){
     const implied=own.observed_price/own.annual_fcf_per_share;
