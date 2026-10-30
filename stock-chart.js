@@ -1,3 +1,4 @@
+import {getCachedDaily,storeCachedDaily,clearDailyHistory} from "./stock-history-cache.mjs";
 import {calculateTechnicalSignals,SIGNAL_DESCRIPTIONS} from "./stock-signals.mjs";
 import {PERIODS,validateHistory,priceStats,nearestIndex,cacheIsFresh,quoteIsOld} from "./stock-chart-utils.mjs";
 // On-demand chart only. No automatic polling, no fabricated series, no third-party scripts.
@@ -172,7 +173,7 @@ async function load(){
   if(!response.ok)throw Error(payload.error||"Historian hakeminen epäonnistui.");
   if(myGen!==generation||opened!==item.id||chosen!==period)return;
   if(!validateHistory(payload))throw Error("Kurssihavaintojen tarkistus epäonnistui.");
-  cache.set(symbol+"|"+period,{data:payload,fetchedAt:now()});render();
+  cache.set(symbol+"|"+period,{data:payload,fetchedAt:now()});if(period==="1y")storeCachedDaily(session.user.id,symbol,payload);render();
  }catch(e){
   if(myGen!==generation)return;
   const target=host.querySelector("#stock-chart-status");
@@ -190,13 +191,15 @@ async function loadSignals(symbol,output,button){
  try{
   const db=window.agentSupabaseClient,{data:{session}}=await db.auth.getSession();
   if(!session?.access_token)throw Error("Kirjaudu ensin sisään.");
-  let info=cache.get(symbol+"|1y");
+  const uid=session.user.id;
+  const shared=getCachedDaily(uid,symbol);
+  let info=shared?{data:shared,fetchedAt:now()}:cache.get(symbol+"|1y");
   if(!cacheIsFresh(info,"1y")){
    const timeout=setTimeout(()=>ctrl.abort(),14000);
    let res;try{res=await fetch(api,{method:"POST",signal:ctrl.signal,headers:{"Authorization":"Bearer "+session.access_token,"apikey":publicKey,"Content-Type":"application/json"},body:JSON.stringify({action:"history",symbol,period:"1y"})})}finally{clearTimeout(timeout)}
    const data=await res.json().catch(()=>({}));
    if(!res.ok)throw Error(data.error||"Kurssihistorian haku epäonnistui.");
-   info={data,fetchedAt:now()};cache.set(symbol+"|1y",info);
+   info={data,fetchedAt:now()};cache.set(symbol+"|1y",info);storeCachedDaily(uid,symbol,data);
   }
   if(current!==signalGeneration||ctrl.signal.aborted)return;
   const result=calculateTechnicalSignals(info.data);
@@ -236,3 +239,5 @@ document.addEventListener("agent:stocks-loaded",()=>{if(opened)render()});
 document.addEventListener("agent:stock-change",()=>{if(opened)setTimeout(render,0)});
 window.addEventListener("online",()=>{if(opened&&!cacheIsFresh(cache.get((window.agentStockBridge?.get()||[]).find(x=>x.id===opened)?.ticker+"|"+chosen),chosen))load()});
 render();
+
+window.agentSupabaseClient.auth.onAuthStateChange(()=>{clearDailyHistory();cache.clear()});
