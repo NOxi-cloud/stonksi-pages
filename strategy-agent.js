@@ -8,6 +8,9 @@ const normalizeTicker=(raw)=>{const s=String(raw||"").trim().toUpperCase();const
 let uid=null,records=[],settings={day:1000,long:5000,risk:.5,maxDayLoss:25};
 const key=()=>uid?"stonksi-strategy-sandbox-"+uid:null;
 const save=()=>{if(uid)sessionStorage.setItem(key(),JSON.stringify({records,settings}))};
+let thesisLoadEpoch=0;
+async function syncTheses(){const token=++thesisLoadEpoch,expected=uid;if(!expected)return;const {data,error}=await db.from("investment_theses").select("ticker,thesis,invalidates").eq("user_id",expected).order("updated_at",{ascending:false});if(token!==thesisLoadEpoch||uid!==expected)return;if(error){console.warn("Thesis sync unavailable",error.code);return}let changed=false;for(const item of data||[]){const i=records.findIndex(x=>x.type==="thesis"&&normalizeTicker(x.ticker)===item.ticker);if(i>=0)records[i]={type:"thesis",strategy:"long",...item};else records.push({type:"thesis",strategy:"long",...item});changed=true}if(changed){save();render()}}
+async function persistThesis(item){if(!uid)throw Error("Kirjaudu sisään");const {data:{session}}=await db.auth.getSession();if(session?.user?.id!==uid)throw Error("Istunto vaihtui");const {error}=await db.from("investment_theses").upsert({user_id:uid,ticker:item.ticker,thesis:item.thesis,invalidates:item.invalidates},{onConflict:"user_id,ticker"});if(error)throw error;}
 function restore(){try{const o=JSON.parse(sessionStorage.getItem(key())||"null");if(o&&Array.isArray(o.records)&&o.records.length<500){records=o.records;settings={...settings,...o.settings}}}catch{}}
 function render(){
  root.replaceChildren();
@@ -48,7 +51,7 @@ function render(){
  const form=e("form",undefined,"strategy-form"),ticker=e("input"),thesis=e("textarea"),invalidates=e("textarea"),thesisList=e("div");
  ticker.placeholder="Yhtiön ticker, esim. NOKIA.HE";ticker.maxLength=20;thesis.placeholder="Miksi omistaisin yhtiötä?";invalidates.placeholder="Mikä muutos kumoaa sijoitusteesin?";for(const t of [thesis,invalidates]){t.maxLength=1000;t.required=true}ticker.required=true;
  form.append(ticker,thesis,invalidates,e("button","Tallenna sijoitusteesi","secondary-btn"));long.append(form,thesisList);
- form.onsubmit=event=>{event.preventDefault();const t=ticker.value.trim().toUpperCase();if(!/^[A-Z0-9^][A-Z0-9.^_-]{0,19}$/.test(t))return;records.push({type:"thesis",strategy:"long",ticker:t,thesis:thesis.value.slice(0,1000),invalidates:invalidates.value.slice(0,1000)});save();draw();thesis.value="";invalidates.value=""};
+ form.onsubmit=async event=>{event.preventDefault();const t=normalizeTicker(ticker.value);if(!/^[A-Z0-9^][A-Z0-9.^_-]{0,19}$/.test(t))return;const item={type:"thesis",strategy:"long",ticker:t,thesis:thesis.value.slice(0,1000),invalidates:invalidates.value.slice(0,1000)};const btn=form.querySelector("button");btn.disabled=true;try{await persistThesis(item);const i=records.findIndex(x=>x.type==="thesis"&&normalizeTicker(x.ticker)===t);if(i>=0)records[i]=item;else records.push(item);save();draw();thesis.value="";invalidates.value="";output.textContent="Sijoitusteesi tallennettu Supabaseen."}catch(error){output.textContent="Tallennus epäonnistui: "+error.message+" – tekstiä ei tyhjennetty."}finally{btn.disabled=false}};
  const search=e("button","Tarkista tallennettu yritysanalyysi","secondary-btn"),output=e("p","Haku käynnistyy vain painalluksesta.","muted");search.type="button";long.append(search,output);
  search.onclick=async()=>{search.disabled=true;output.textContent="Haetaan…";try{
  const {data:{session}}=await db.auth.getSession();if(!session||session.user.id!==uid)throw Error("Kirjaudu sisään");
@@ -70,5 +73,5 @@ function render(){
  for(const x of records.filter(x=>x.type==="thesis").slice(-12).reverse())thesisList.append(e("p",x.ticker+" · "+x.thesis+" · Kumoutuu: "+x.invalidates,"muted"));
  }draw();
 }
-db.auth.onAuthStateChange((_evt,session)=>{const next=session?.user?.id||null;if(next===uid)return;uid=next;records=[];settings={day:1000,long:5000,risk:.5,maxDayLoss:25};if(uid)restore();render()});
+db.auth.onAuthStateChange((_evt,session)=>{const next=session?.user?.id||null;if(next===uid)return;uid=next;records=[];settings={day:1000,long:5000,risk:.5,maxDayLoss:25};if(uid)restore();render();if(uid)syncTheses();if(uid)syncTheses()});
 const {data:{session}}=await db.auth.getSession();uid=session?.user?.id||null;if(uid)restore();render();
