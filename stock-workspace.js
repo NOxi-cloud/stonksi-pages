@@ -1,3 +1,4 @@
+import {BENCHMARKS,benchmarkMatches,renderBenchmarkComparison} from "./stock-signal-benchmark.mjs";
 import {calculateTechnicalSignals} from "./stock-signals.mjs";
 import {makeSignalObservation,loadSignalHistory,saveSignalHistory,updateSignalOutcomes,renderSignalHistory} from "./stock-signal-history.mjs";
 import {renderResearchPriorities} from "./stock-research-priorities.mjs";
@@ -45,6 +46,23 @@ const historyHost=make("section",undefined,"watchlist-signal-summary");
 historyHost.hidden=true;
 const historyButton=make("button","Näytä signaalihistoria","secondary-btn");historyButton.type="button";
 historyButton.addEventListener("click",async()=>{const {data:{session}}=await db.auth.getSession();if(!session?.user?.id){signalStatus.textContent="Kirjaudu sisään.";return}historyHost.hidden=!historyHost.hidden;if(!historyHost.hidden)renderSignalHistory(historyHost,loadSignalHistory(session.user.id));historyButton.textContent=historyHost.hidden?"Näytä signaalihistoria":"Piilota signaalihistoria"});
+const benchmarkSelect=make("select");benchmarkSelect.setAttribute("aria-label","Vertailuindeksi");
+for(const b of BENCHMARKS){const o=make("option",b.label);o.value=b.symbol;benchmarkSelect.append(o)}
+const benchmarkButton=make("button","Vertaa indeksiin","secondary-btn");benchmarkButton.type="button";
+const benchmarkStatus=make("p","","muted"),benchmarkHost=make("div",undefined,"watchlist-signal-summary");
+benchmarkButton.addEventListener("click",async()=>{
+ benchmarkButton.disabled=true;benchmarkStatus.textContent="Haetaan valitun indeksin historiaa kerran käyttäjän pyynnöstä.";
+ try{
+  const {data:{session}}=await db.auth.getSession();if(!session?.user?.id)throw Error("Kirjaudu sisään.");
+  const raw=await request({action:"history",symbol:benchmarkSelect.value,period:"1y"});
+  const {data:{session:live}}=await db.auth.getSession();if(live?.user?.id!==session.user.id)throw Error("Istunto vaihtui.");
+  const observations=loadSignalHistory(session.user.id);
+  const results=benchmarkMatches(observations,raw,benchmarkSelect.value);
+  renderBenchmarkComparison(benchmarkHost,results,benchmarkSelect.value);
+  benchmarkStatus.textContent=results.length+" vertailukelpoista havaintojaksoa. Indeksin haku käyttää yhden kurssihaun.";
+ }catch(error){benchmarkStatus.textContent="Indeksivertailu epäonnistui: "+error.message}
+ finally{benchmarkButton.disabled=false}
+});
 const valuationButton=make("button","Näytä tallennetut arvostukset","secondary-btn");valuationButton.type="button";
 const valuationStatus=make("p","","muted");
 const valuationRows=make("div",undefined,"signal-summary-ranking");
@@ -92,8 +110,8 @@ valuationButton.addEventListener("click",async()=>{
 const signalSummary=make("div",undefined,"watchlist-signal-summary");
 const signalResults=new Map();
 const refreshSignalSummary=()=>{renderSignalSummary(signalResults,signalSummary,Math.min(stocks().filter(x=>validSymbol(x.ticker)).length,30));refreshPriorities()};
-signalActions.append(signalButton,signalReset,historyButton);
-signalPanel.append(signalTitle,signalHelp,signalActions,signalStatus,signalSummary,priorityHost,signalRows,historyHost,valuationButton,valuationStatus,valuationRows);
+signalActions.append(signalButton,signalReset,historyButton,benchmarkSelect,benchmarkButton);
+signalPanel.append(signalTitle,signalHelp,signalActions,signalStatus,signalSummary,priorityHost,signalRows,historyHost,benchmarkStatus,benchmarkHost,valuationButton,valuationStatus,valuationRows);
 refreshSignalSummary();
 let signalOffset=0,signalRun=0,signalBusy=false;
 signalReset.addEventListener("click",()=>{signalRun++;signalOffset=0;signalRows.replaceChildren();signalResults.clear();refreshSignalSummary();signalStatus.textContent="Valmis uuteen hakuun.";signalBusy=false;signalButton.disabled=false;});
