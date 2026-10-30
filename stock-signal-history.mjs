@@ -1,11 +1,13 @@
 // User-initiated observations; kept on this device and scoped to signed-in user.
 // No network traffic, AI calls, automated price checks or trade execution.
 const MAX_RECORDS=250;
-export function makeSignalObservation(item,result,now=Date.now()){
+export function makeSignalObservation(item,result,now=Date.now(),raw=null){
  if(!item||!result||typeof item.ticker!=="string")return null;
  const ticker=item.ticker.trim().toUpperCase(),asOf=Date.parse(result.asOf);
  if(!/^[A-Z0-9^][A-Z0-9.^_-]{0,19}$/.test(ticker)||!Number.isFinite(asOf)||asOf>now+300000)return null;
- return {ticker,name:String(item.name||ticker).slice(0,100),recordedAt:new Date(now).toISOString(),asOf:result.asOf,
+ const start=Array.isArray(raw?.points)?raw.points.find(p=>Number(p.t)*1000===asOf):null;
+ const close=Number(start?.price);
+ return {close:Number.isFinite(close)&&close>0?close:null,outcomes:{},ticker,name:String(item.name||ticker).slice(0,100),recordedAt:new Date(now).toISOString(),asOf:result.asOf,
  rsi:Number.isFinite(result.rsi14)?result.rsi14:null,trend:result.sma50>result.sma200?"nouseva":result.sma50<result.sma200?"laskeva":"neutraali",
  macd:result.macd?.bullishCross?"nouseva risteämä":result.macd?.bearishCross?"laskeva risteämä":result.macd?.histogram>0?"positiivinen":result.macd?.histogram<0?"negatiivinen":"puuttuu"};
 }
