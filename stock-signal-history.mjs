@@ -32,10 +32,28 @@ export function saveSignalHistory(uid,observations){
   return true;
  }catch{return false}
 }
+export function updateSignalOutcomes(uid,ticker,raw){
+ const series=Array.isArray(raw?.points)?raw.points.filter(p=>Number.isFinite(Number(p.t))&&Number.isFinite(Number(p.price))&&Number(p.price)>0).sort((a,b)=>a.t-b.t):[];
+ if(series.length<21)return false;
+ const history=loadSignalHistory(uid);let changed=false;
+ for(const item of history){
+  if(item.ticker!==ticker||!Number.isFinite(item.close)||item.close<=0)continue;
+  const i=series.findIndex(p=>Number(p.t)*1000===Date.parse(item.asOf));
+  if(i<0)continue;
+  item.outcomes=item.outcomes||{};
+  for(const days of [5,10,20]){
+   if(item.outcomes[days]!==undefined||i+days>=series.length)continue;
+   item.outcomes[days]=Math.round(10000*(Number(series[i+days].price)/item.close-1))/100;
+   changed=true;
+  }
+ }
+ if(changed){try{localStorage.setItem("stonksi-signal-history-v1-"+uid,JSON.stringify(history));return true}catch{return false}}
+ return false;
+}
 export function renderSignalHistory(host,items){
  host.replaceChildren();
  const heading=document.createElement("h4");heading.textContent="Signaalien historia";host.append(heading);
- const note=document.createElement("p");note.className="muted";note.textContent="Tallennetaan tämän laitteen selaimeen vain käynnistämiesi laskentojen havainnot. Ei vielä kurssikehityksen jälkikäteistä tuottovertailua.";host.append(note);
+ const note=document.createElement("p");note.className="muted";note.textContent="Tallennetaan tämän laitteen selaimeen vain käynnistämiesi laskentojen havainnot. 5/10/20 kaupankäyntipäivän kurssimuutokset täyttyvät seuraavan käyttäjän käynnistämän historiahaun yhteydessä. Ei sisällä osinkoja eikä kuluja.";host.append(note);
  if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="Ei havaintoja vielä.";host.append(p);return}
  const list=document.createElement("div");list.className="signal-summary-ranking";
  const ordered=[...items].sort((a,b)=>Date.parse(b.recordedAt)-Date.parse(a.recordedAt)).slice(0,30);
@@ -44,7 +62,8 @@ export function renderSignalHistory(host,items){
   const title=document.createElement("strong");title.textContent=x.name+" · "+x.ticker;
   const status=document.createElement("span");status.textContent="Trendi "+x.trend+" · MACD "+x.macd;
   const stamp=document.createElement("small");stamp.className="muted";stamp.textContent="Havainto "+new Date(x.asOf).toLocaleDateString("fi-FI")+" · tallennettu "+new Date(x.recordedAt).toLocaleString("fi-FI");
-  row.append(title,status,stamp);list.append(row);
+  const outcome=document.createElement("small");outcome.className="muted";outcome.textContent=[5,10,20].map(n=>n+" pv: "+(Number.isFinite(x.outcomes?.[n])?(x.outcomes[n]>0?"+":"")+x.outcomes[n].toLocaleString("fi-FI")+" %":"odottaa")).join(" · ");
+  row.append(title,status,stamp,outcome);list.append(row);
  }
  host.append(list);
 }
