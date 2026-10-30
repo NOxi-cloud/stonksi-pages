@@ -503,6 +503,12 @@ function renderDataQuality(payload){
   const box=document.createElement("section");box.className="ai-pe-panel";
   const heading=document.createElement("h4");heading.textContent="Stonksin oma 12 kk arvostusskenaario (ei analyytikon tavoitehinta)";
   const description=document.createElement("p");description.textContent="Historiallinen vapaa kassavirta "+Number(own.annual_fcf_million_usd).toLocaleString("fi-FI")+" milj. USD; osakemäärä "+Number(own.share_count).toLocaleString("fi-FI")+" (SEC "+own.shares_as_of+").";
+  if(own.calibration?.status==="verified_three_year_fcf_growth_sensitivity"){
+   const context=document.createElement("p");context.className="muted";
+   context.textContent="FCF-muutoshaarukka perustuu kolmeen SEC-vuositilinpäätökseen ("+
+     own.calibration.periods.join(", ")+"). P/FCF-kertoimet 10×/15×/20× ovat edelleen yleisiä herkkyysoletuksia, eivät yhtiökohtaisesti kalibroituja.";
+   box.append(context);
+  }
   const table=document.createElement("table");table.className="ai-scenario-table";
   const head=document.createElement("tr");
   for(const label of ["Skenaario","FCF-muutos","P/FCF","Ehdollinen osakehinta"]){const th=document.createElement("th");th.textContent=label;head.append(th)}
