@@ -397,6 +397,40 @@ function renderDataQuality(payload){
   if(list.childElementCount)note.append(list);
   qualityPanel.append(note);
  }
+ const esef=q.esef_filing_index;
+ if(esef&&esef.source==="filings.xbrl.org"&&
+   ["candidate","not_found","ambiguous","unavailable"].includes(esef.status)){
+  const section=document.createElement("details");section.className="ai-quality-details";
+  const title=document.createElement("summary");title.textContent="Tilinpäätösarkisto (ESEF / XBRL)";
+  const help=document.createElement("p");help.textContent=
+   "Tämä on ulkoisen arkiston hakutulos, ei vielä varmennettu tilinpäätös, kassavirta, osakemäärä tai Stonksin tavoitehinta.";
+  section.append(title,help);
+  const results=Array.isArray(esef.candidates)?esef.candidates.slice(0,3):[];
+  if(esef.status==="candidate"&&results.length){
+   for(const item of results){
+    if(item?.source_status!=="index_candidate_unverified"||
+       !/^\\d{4}-\\d{2}-\\d{2}$/.test(item.period_end||"")||
+       !/^[A-Z0-9]{20}$/.test(item.issuer_lei||""))continue;
+    const row=document.createElement("p");
+    row.textContent="Raporttikausi: "+item.period_end+" · "+String(item.issuer_name||"").slice(0,110)+
+      " · LEI "+item.issuer_lei+" · indeksiehdokas (ei varmennettu).";
+    section.append(row);
+    if(typeof item.viewer_url==="string"){
+     try{const u=new URL(item.viewer_url);if(u.origin==="https://filings.xbrl.org"&&!u.username&&!u.password){
+      const link=document.createElement("a");link.href=u.href;link.target="_blank";
+      link.rel="noopener noreferrer";link.textContent="Avaa julkaisun katselusivu";section.append(link);
+     }}catch{}
+    }
+   }
+  }else{
+   const p=document.createElement("p");p.textContent=esef.status==="not_found"?
+     "Täsmäävää julkaisua ei löytynyt hakuehdoilla.":
+     esef.status==="ambiguous"?"Yhtiötunniste jäi epäselväksi; julkaisua ei valittu.":
+     "Arkiston tietoja ei voitu tarkistaa tällä hakukerralla.";
+   section.append(p);
+  }
+  qualityPanel.append(section);
+ }
  const registry=q.prh_registry;
  if(registry?.status==="registry_name_match_not_equity_verified"&&typeof registry.business_id==="string"&&/^\d{7}-\d$/.test(registry.business_id)){
   const block=document.createElement("p");block.className="muted";
