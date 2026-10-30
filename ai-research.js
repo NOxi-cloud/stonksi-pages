@@ -2,6 +2,7 @@ import {watchlistSuggestions} from "./ai-watchlist-suggestions.mjs";
 import {describeEvidence,stripResearchIdentityBanner} from "./ai-data-quality.mjs";
 import {normalizedFinancialDrivers} from "./ai-financial-drivers.mjs";
 import {extractOperatingScenarioBlock,formatScenarioAmount,formatScenarioPercent} from "./ai-scenarios.mjs";
+import {normalizedScenarioImpact} from "./ai-scenario-impact.mjs";
 // Research UI: explicit user-triggered AI request, never runs trades.
 const db=window.agentSupabaseClient;
 const view=document.getElementById("view-research");
@@ -141,7 +142,9 @@ function compactSummaryMillions(value){
   return billions+" "+suffix+space+currency;
  });
 }
-function renderAnalysis(raw){
+let currentImpactPayload=null;
+function renderAnalysis(raw,payload=null){
+ currentImpactPayload=payload;
  result.replaceChildren();
  const text=stripResearchIdentityBanner(raw);
  const sections=[];let current={title:"Analyysi",lines:[]};
@@ -210,7 +213,28 @@ function renderAnalysis(raw){
    table.append(tbody);
    const assumptions=document.createElement("p");assumptions.textContent="Oletukset: Bear −10 % liikevaihto / −2 %-yks. marginaali; Base 0 / 0; Bull +10 % / +2 %-yks.";
    const caveat=document.createElement("p");caveat.textContent="Mekaaninen laskelma, ei tulosennuste, osakekurssin tavoitehinta tai sijoitussuositus.";
-   panel.append(heading,period,table,assumptions,caveat);details.append(panel);
+   panel.append(heading,period,table,assumptions,caveat);
+   const impact=normalizedScenarioImpact(currentImpactPayload,info);
+   if(impact){
+    const impactDetails=document.createElement("details");impactDetails.className="ai-impact-details";
+    const summary=document.createElement("summary");summary.textContent="Mistä tulosmuutos muodostuu?";impactDetails.append(summary);
+    const note=document.createElement("p");note.textContent="Mekaaninen vaikutuserittely suhteessa Base-skenaarioon. Ei selitys yhtiön todellisista tulosajureista.";
+    impactDetails.append(note);
+    for(const item of impact.rows){
+     const card=document.createElement("div");card.className="ai-impact-card";
+     const head=document.createElement("strong");head.textContent=item.name+": muutos "+formatScenarioAmount(item.result_change,impact.unit);
+     card.append(head);
+     for(const [label,value] of [["Liikevaihdon vaikutus",item.revenue_effect],["Marginaalin vaikutus",item.margin_effect],["Yhteisvaikutus",item.interaction_effect]]){
+      const line=document.createElement("div");line.className="ai-impact-line";
+      const key=document.createElement("span");key.textContent=label;
+      const val=document.createElement("strong");val.textContent=formatScenarioAmount(value,impact.unit);
+      line.append(key,val);card.append(line);
+     }
+     impactDetails.append(card);
+    }
+    panel.append(impactDetails);
+   }
+   details.append(panel);
   }
   result.append(details);
  }
@@ -453,7 +477,7 @@ loadButton.addEventListener("click",async()=>{
   if(!updated?.length){renderAnalysis(payload.analysis);analysisTitle.textContent="Uusi analyysi (tallennus epäonnistui): "+report.query;showAnalysis();throw Error("Uusi analyysi näkyy sivulla mutta ei tallentunut. Älä sulje sivua ennen tekstin kopiointia.");}
   report.analysis=payload.analysis;report.generated_at=generatedAt;
   open.textContent=report.query+" · "+new Date(generatedAt).toLocaleString("fi-FI");
-  renderAnalysis(payload.analysis);renderDataQuality(payload);renderAnalystSources(payload);renderFinancialDrivers(payload);status.textContent="Päivitetty analyysi · "+new Date(generatedAt).toLocaleString("fi-FI")+" · "+describeDataQuality(payload);
+  renderAnalysis(payload.analysis,payload);renderDataQuality(payload);renderAnalystSources(payload);renderFinancialDrivers(payload);status.textContent="Päivitetty analyysi · "+new Date(generatedAt).toLocaleString("fi-FI")+" · "+describeDataQuality(payload);
   analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();
   reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");
   saveStatus.textContent="Analyysi päivitetty ja tallennettu.";analysisHeader.scrollIntoView({behavior:"smooth",block:"start"});
@@ -488,7 +512,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
   const payload=await response.json();
   if(!response.ok){showIdentityChoices(payload);throw new Error(payload.error||"Palvelinvirhe ("+response.status+")")}
   status.textContent="Analyysi valmis · "+new Date(payload.generated_at).toLocaleString("fi-FI")+" · "+describeDataQuality(payload);
-  renderAnalysis(payload.analysis||"Analyysiteksti puuttuu.");renderDataQuality(payload);renderAnalystSources(payload);renderFinancialDrivers(payload);
+  renderAnalysis(payload.analysis||"Analyysiteksti puuttuu.",payload);renderDataQuality(payload);renderAnalystSources(payload);renderFinancialDrivers(payload);
   if(payload.analysis){analysisTitle.textContent="Analyysi: "+query;showAnalysis()}
   if(payload.analysis){currentReport={query,analysis:payload.analysis,generated_at:payload.generated_at};saveButton.disabled=false}
  }catch(err){status.textContent=err.name==="AbortError"?"Pyyntö aikakatkaistiin.":("Analyysi epäonnistui: "+err.message)}

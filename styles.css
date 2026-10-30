@@ -81,3 +81,5 @@
 .ai-driver-card .ai-driver-finding{font-weight:700;color:#f2f4fb}
 .ai-driver-card .ai-driver-monitor{color:#b9c2db}
 .ai-driver-panel>a{display:inline-block;color:#9cc5ff;text-decoration:underline;margin:5px 0;overflow-wrap:anywhere}
+
+.ai-impact-details{border-top:1px solid #353c50;margin-top:12px;padding-top:12px}.ai-impact-details summary{cursor:pointer;font-weight:600}.ai-impact-card{border:1px solid #353c50;border-radius:10px;padding:12px;margin:10px 0}.ai-impact-line{display:flex;gap:10px;justify-content:space-between;padding:6px 0;flex-wrap:wrap}.ai-impact-line strong{font-variant-numeric:tabular-nums}
