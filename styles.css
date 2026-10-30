@@ -160,3 +160,14 @@
 #strategy-agent-workspace .strategy-form>input,#strategy-agent-workspace .strategy-form>select,#strategy-agent-workspace .strategy-form>textarea{width:100%;min-width:0}
 #strategy-agent-workspace .strategy-form>button{justify-self:start;max-width:100%;white-space:normal}
 @media(max-width:700px){#strategy-agent-workspace .strategy-limits{grid-template-columns:1fr}}
+
+/* Compact watchlist layout: preserve existing dark cards and responsive grid. */
+.watchlist-signals>[hidden],.watchlist-signal-summary[hidden],.signal-summary-ranking[hidden]{display:none!important}
+.watchlist-signals .watchlist-signal-summary{margin:12px 0}
+.watchlist-signals .signal-summary-ranking{margin:10px 0}
+.stock-positions{min-width:0}
+.stock-positions .stock-position-form{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px;margin:12px 0}
+.stock-positions .stock-position-form label{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stock-positions .stock-position-form input{background:#151a27!important;color:#f1f3f9!important;border:1px solid #353c50!important;border-radius:9px!important;box-sizing:border-box;min-height:44px}
+.stock-positions .stock-position-form button{min-height:44px}
+@media(max-width:540px){.stock-positions .stock-position-form label{flex:1 1 135px}.stock-positions .stock-position-form input{width:100%!important}.stock-positions .stock-position-form button{flex:1 1 100%}}
