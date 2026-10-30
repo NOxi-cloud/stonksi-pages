@@ -68,7 +68,6 @@ if(root&&db){
    const parsedLang=typeof item.json_url==="string"?item.json_url.match(/-([a-z]{2})\.json(?:$|\?)/i)?.[1]?.toLowerCase():null;
    const language=({fi:"Suomi",en:"Englanti",sv:"Ruotsi"})[parsedLang]||"Muu kieli";
    addRow(entry,"Julkaisun kieli",language);
-   addRow(entry,"Tilikausi päättyi",item.period_end);
    addRow(entry,"LEI",item.issuer_lei);
    const link=safeLink(item.viewer_url||item.json_url,["filings.xbrl.org"],"Avaa raporttimerkintä");
    if(link){const wrap=el("div",undefined,"company-source-link");wrap.append(link);entry.append(wrap);}
