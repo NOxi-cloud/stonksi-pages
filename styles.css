@@ -171,3 +171,12 @@
 .stock-positions .stock-position-form input{background:#151a27!important;color:#f1f3f9!important;border:1px solid #353c50!important;border-radius:9px!important;box-sizing:border-box;min-height:44px}
 .stock-positions .stock-position-form button{min-height:44px}
 @media(max-width:540px){.stock-positions .stock-position-form label{flex:1 1 135px}.stock-positions .stock-position-form input{width:100%!important}.stock-positions .stock-position-form button{flex:1 1 100%}}
+
+/* Saved research reports: dark theme, predictable alignment and accessible menu. */
+.ai-saved-report-row{border-top:1px solid #353c50;padding:11px 0;display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:10px;align-items:center;min-width:0}
+.ai-saved-report-open{display:block;box-sizing:border-box;width:100%;min-width:0;min-height:46px;padding:11px 14px;text-align:left;white-space:normal;overflow-wrap:anywhere;background:#171d2c!important;color:#f2f4fa!important;border:1px solid #353c50!important;border-radius:9px!important;font:inherit;cursor:pointer}
+.ai-saved-report-open:hover,.ai-saved-report-open:focus-visible{border-color:#9989f2!important;background:#20263a!important}
+.ai-saved-report-menu{position:relative;justify-self:end;width:44px}
+.ai-saved-report-actions{display:flex;flex-direction:column;gap:8px;position:absolute;right:0;top:46px;z-index:10;min-width:185px;padding:10px;background:#242b3a;border:1px solid #535c73;border-radius:10px;box-shadow:0 6px 18px #0009}
+.ai-saved-report-actions button{min-height:42px}
+@media(max-width:600px){.ai-saved-report-actions{max-width:calc(100vw - 40px)}}
