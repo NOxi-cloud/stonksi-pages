@@ -206,7 +206,9 @@ async function loadSignals(symbol,output,button){
   const signals=[
    ["RSI(14)",result.rsi14.toLocaleString("fi-FI"),result.overbought?"Yliostettu":result.oversold?"Ylimyyty":"Neutraali"],
    ["Liukuvat keskiarvot",result.sma50.toLocaleString("fi-FI")+" / "+result.sma200.toLocaleString("fi-FI"),result.trend],
-   ["Risteämä",null,result.goldenCross?"Kultainen risti":result.deathCross?"Kuolonristi":"Ei uutta risteämää viimeisen kahden pörssipäivän aikana"]
+   ["Risteämä",null,result.goldenCross?"Kultainen risti":result.deathCross?"Kuolonristi":"Ei uutta risteämää viimeisen kahden pörssipäivän aikana"],
+   ["MACD(12,26,9)",result.macd?result.macd.macd.toLocaleString("fi-FI")+" / signaali "+result.macd.signal.toLocaleString("fi-FI"):null,result.macd?(result.macd.bullishCross?"Nouseva risteämä":result.macd.bearishCross?"Laskeva risteämä":result.macd.histogram>=0?"MACD signaalilinjan yläpuolella":"MACD signaalilinjan alapuolella"):"Ei laskettavissa"],
+   ["Vaihtomäärä",result.volume?result.volume.ratio.toLocaleString("fi-FI")+"× 20 päivän keskiarvosta":null,result.volume?(result.volume.unusuallyHigh?"Poikkeuksellisen suuri":result.volume.unusuallyLow?"Poikkeuksellisen pieni":"Tavanomainen"):"Puuttuva volyymidata"]
   ];
   for(const [name,value,state] of signals){
    const row=el("div","stock-signal-row");
@@ -217,6 +219,7 @@ async function loadSignals(symbol,output,button){
    const details=el("details","stock-signal-help"),summary=el("summary","",label);
    details.append(summary,el("p","muted",SIGNAL_DESCRIPTIONS[key]));output.append(details);
   }
+  output.append(el("p","muted","MACD on trendiä seuraava viiveellinen mittari. Volyymitieto ei yksin kerro osto- tai myyntipainetta."));
   output.append(el("p","muted","Pörssin tarkkailulista: ei tarkistettu. "+SIGNAL_DESCRIPTIONS.exchangeWatch));
   output.append(el("p","muted",result.disclaimer));
  }catch(e){if(current===signalGeneration){output.replaceChildren();output.append(el("p","muted","Signaalien laskenta epäonnistui: "+(e?.name==="AbortError"?"Aikakatkaisu":e.message)))}}
