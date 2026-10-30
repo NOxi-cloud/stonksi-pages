@@ -85,3 +85,5 @@
 .ai-impact-details{border-top:1px solid #353c50;margin-top:12px;padding-top:12px}.ai-impact-details summary{cursor:pointer;font-weight:600}.ai-impact-card{border:1px solid #353c50;border-radius:10px;padding:12px;margin:10px 0}.ai-impact-line{display:flex;gap:10px;justify-content:space-between;padding:6px 0;flex-wrap:wrap}.ai-impact-line strong{font-variant-numeric:tabular-nums}
 
 .ai-assumption-provenance{border-top:1px solid #353c50;margin-top:12px;padding-top:12px;overflow-wrap:anywhere}.ai-assumption-provenance p{margin:8px 0}.ai-assumption-provenance a{color:#9cc5ff;text-decoration:underline}
+
+.ai-price-target-card{border:1px solid #4b5a76;border-radius:12px;margin:12px 0;padding:14px;overflow-wrap:anywhere}.ai-price-target-number{font-weight:750;font-size:clamp(23px,5vw,32px);margin:7px 0}.ai-price-target-card p{line-height:1.5}.ai-price-target-card a{color:#9cc5ff}

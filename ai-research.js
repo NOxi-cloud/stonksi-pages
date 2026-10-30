@@ -323,6 +323,21 @@ function renderDataQuality(payload){
  const q=payload?.data_quality;
  if(!q){qualityPanel.hidden=true;return}
  qualityPanel.hidden=false;
+ const target=payload?.data_quality?.price_target_view;
+ if(target&&["verified_analyst_target","conditional_model_price"].includes(target.kind)&&
+   typeof target.price==="number"&&Number.isFinite(target.price)&&target.price>0&&
+   ["EUR","USD","SEK","NOK","DKK","GBP","CHF"].includes(target.currency)){
+  const card=document.createElement("div");card.className="ai-price-target-card";
+  const h=document.createElement("strong");h.textContent=target.kind==="verified_analyst_target"?"Analyytikon tavoitehinta":"Stonksin laskennallinen Base-arvo";
+  const price=document.createElement("p");price.className="ai-price-target-number";
+  price.textContent=target.price.toLocaleString("fi-FI",{minimumFractionDigits:2,maximumFractionDigits:2})+" "+target.currency;
+  const note=document.createElement("p");note.textContent=target.kind==="conditional_model_price"?"Ehdollinen P/FCF-arvo – ei vahvistettu 12 kk tavoitehinta tai kurssiennuste.":String(target.note||"Varmennettu analyytikon arvio.").slice(0,250);
+  card.append(h,price,note);
+  if(target.kind==="verified_analyst_target"&&typeof target.source_url==="string"){
+   try{const u=new URL(target.source_url);if(u.protocol==="https:"&&["inderes.fi","www.inderes.fi"].includes(u.hostname)){const link=document.createElement("a");link.href=u.href;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Avaa alkuperäinen analyysi";card.append(link)}}catch{}
+  }
+  qualityPanel.append(card);
+ }
  const h=document.createElement("strong");h.textContent="Lähtötietojen yhteenveto";qualityPanel.append(h);
  const fmtDate=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?"Aika puuttuu":d.toLocaleString("fi-FI",{dateStyle:"short",timeStyle:"short"})};
  const summary=document.createElement("div");summary.className="ai-quality-summary";
