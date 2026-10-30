@@ -1,4 +1,5 @@
 import {calculateTechnicalSignals} from "./stock-signals.mjs";
+import {renderSignalSummary} from "./stock-signal-summary.mjs";
 import {getCachedDaily,storeCachedDaily} from "./stock-history-cache.mjs";
 // User-initiated stock discovery, quote updates and cloud-synced positions. No trades.
 const db=window.agentSupabaseClient;
@@ -38,10 +39,14 @@ const signalButton=make("button","Laske 5 seuraavan osakkeen signaalit","seconda
 const signalReset=make("button","Aloita alusta","secondary-btn");signalReset.type="button";
 const signalStatus=make("p","", "muted");signalStatus.setAttribute("role","status");
 const signalRows=make("div",undefined,"watchlist-signal-grid");
+const signalSummary=make("div",undefined,"watchlist-signal-summary");
+const signalResults=new Map();
+const refreshSignalSummary=()=>renderSignalSummary(signalResults,signalSummary,Math.min(stocks().filter(x=>validSymbol(x.ticker)).length,30));
 signalActions.append(signalButton,signalReset);
-signalPanel.append(signalTitle,signalHelp,signalActions,signalStatus,signalRows);
+signalPanel.append(signalTitle,signalHelp,signalActions,signalStatus,signalSummary,signalRows);
+refreshSignalSummary();
 let signalOffset=0,signalRun=0,signalBusy=false;
-signalReset.addEventListener("click",()=>{signalRun++;signalOffset=0;signalRows.replaceChildren();signalStatus.textContent="Valmis uuteen hakuun.";signalBusy=false;signalButton.disabled=false;});
+signalReset.addEventListener("click",()=>{signalRun++;signalOffset=0;signalRows.replaceChildren();signalResults.clear();refreshSignalSummary();signalStatus.textContent="Valmis uuteen hakuun.";signalBusy=false;signalButton.disabled=false;});
 function signalCard(item,result,message){
  const card=make("article",undefined,"watchlist-signal-card");
  card.append(make("strong",item.name+" · "+item.ticker));
@@ -77,8 +82,11 @@ signalButton.addEventListener("click",async()=>{
      storeCachedDaily(session.user.id,item.ticker,raw);
     }
     if(ownRun!==signalRun)break;
-    signalRows.append(signalCard(item,calculateTechnicalSignals(raw),"RSI- ja trenditietoja ei voitu laskea."));
-   }catch(error){if(ownRun===signalRun)signalRows.append(signalCard(item,null,"Haku epäonnistui: "+error.message))}
+    const result=calculateTechnicalSignals(raw);
+    signalResults.set(item.id,{item,result});
+    signalRows.append(signalCard(item,result,"RSI- ja trenditietoja ei voitu laskea."));
+    refreshSignalSummary();
+   }catch(error){if(ownRun===signalRun){signalResults.set(item.id,{item,result:null});signalRows.append(signalCard(item,null,"Haku epäonnistui: "+error.message));refreshSignalSummary()}}
    signalOffset++;
   }
   if(ownRun===signalRun)signalStatus.textContent="Käsitelty "+signalOffset+"/"+Math.min(rows.length,30)+" osaketta. Uudet haut tehdään vain pyynnöstä.";
