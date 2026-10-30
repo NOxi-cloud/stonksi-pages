@@ -211,7 +211,7 @@ function renderAnalysis(raw,payload=null){
     tbody.append(tr);
    }
    table.append(tbody);
-   const assumptions=document.createElement("p");assumptions.textContent="Oletukset: Bear −10 % liikevaihto / −2 %-yks. marginaali; Base 0 / 0; Bull +10 % / +2 %-yks.";
+   const assumptions=document.createElement("p");assumptions.textContent="Oletukset: Bear "+info.rows[0].revenueChange+" % liikevaihto / "+info.rows[0].marginChange+" %-yks. marginaali; Base 0 / 0; Bull +"+info.rows[2].revenueChange+" % / +"+info.rows[2].marginChange+" %-yks. Luvut ovat skenaario-oletuksia, eivät ennusteita.";
    const caveat=document.createElement("p");caveat.textContent="Mekaaninen laskelma, ei tulosennuste, osakekurssin tavoitehinta tai sijoitussuositus.";
    panel.append(heading,period,table,assumptions,caveat);
    const impact=normalizedScenarioImpact(currentImpactPayload,info);
