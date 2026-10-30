@@ -1,0 +1,48 @@
+// User-initiated observations; kept on this device and scoped to signed-in user.
+// No network traffic, AI calls, automated price checks or trade execution.
+const MAX_RECORDS=250;
+export function makeSignalObservation(item,result,now=Date.now()){
+ if(!item||!result||typeof item.ticker!=="string")return null;
+ const ticker=item.ticker.trim().toUpperCase(),asOf=Date.parse(result.asOf);
+ if(!/^[A-Z0-9^][A-Z0-9.^_-]{0,19}$/.test(ticker)||!Number.isFinite(asOf)||asOf>now+300000)return null;
+ return {ticker,name:String(item.name||ticker).slice(0,100),recordedAt:new Date(now).toISOString(),asOf:result.asOf,
+ rsi:Number.isFinite(result.rsi14)?result.rsi14:null,trend:result.sma50>result.sma200?"nouseva":result.sma50<result.sma200?"laskeva":"neutraali",
+ macd:result.macd?.bullishCross?"nouseva risteämä":result.macd?.bearishCross?"laskeva risteämä":result.macd?.histogram>0?"positiivinen":result.macd?.histogram<0?"negatiivinen":"puuttuu"};
+}
+export function loadSignalHistory(uid){
+ if(!uid)return [];
+ try{const raw=JSON.parse(localStorage.getItem("stonksi-signal-history-v1-"+uid)||"[]");
+  if(!Array.isArray(raw))return [];
+  return raw.filter(x=>x&&typeof x.ticker==="string"&&typeof x.recordedAt==="string"&&typeof x.asOf==="string"&&["nouseva","laskeva","neutraali"].includes(x.trend)).slice(-MAX_RECORDS);
+ }catch{return []}
+}
+export function saveSignalHistory(uid,observations){
+ if(!uid)return false;
+ try{
+  const history=loadSignalHistory(uid);
+  for(const x of observations){
+   if(!x)continue;
+   // Prevent duplicates for the same completed trading session.
+   if(history.some(prev=>prev.ticker===x.ticker&&prev.asOf===x.asOf))continue;
+   history.push(x);
+  }
+  localStorage.setItem("stonksi-signal-history-v1-"+uid,JSON.stringify(history.slice(-MAX_RECORDS)));
+  return true;
+ }catch{return false}
+}
+export function renderSignalHistory(host,items){
+ host.replaceChildren();
+ const heading=document.createElement("h4");heading.textContent="Signaalien historia";host.append(heading);
+ const note=document.createElement("p");note.className="muted";note.textContent="Tallennetaan tämän laitteen selaimeen vain käynnistämiesi laskentojen havainnot. Ei vielä kurssikehityksen jälkikäteistä tuottovertailua.";host.append(note);
+ if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="Ei havaintoja vielä.";host.append(p);return}
+ const list=document.createElement("div");list.className="signal-summary-ranking";
+ const ordered=[...items].sort((a,b)=>Date.parse(b.recordedAt)-Date.parse(a.recordedAt)).slice(0,30);
+ for(const x of ordered){
+  const row=document.createElement("article");row.className="signal-summary-entry";
+  const title=document.createElement("strong");title.textContent=x.name+" · "+x.ticker;
+  const status=document.createElement("span");status.textContent="Trendi "+x.trend+" · MACD "+x.macd;
+  const stamp=document.createElement("small");stamp.className="muted";stamp.textContent="Havainto "+new Date(x.asOf).toLocaleDateString("fi-FI")+" · tallennettu "+new Date(x.recordedAt).toLocaleString("fi-FI");
+  row.append(title,status,stamp);list.append(row);
+ }
+ host.append(list);
+}
