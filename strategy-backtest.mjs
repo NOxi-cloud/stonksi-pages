@@ -19,7 +19,7 @@ export function backtestSwingHistory(raw,maxCases=35){
   if(!assessment.rules||assessment.provisional||assessment.marketAt!==new Date(current.t*1000).toISOString())continue;
   const later=rows[i+5];
   if(!Number.isFinite(later?.price)||later.price<=0)continue;
-  results.push({day:helsinkiDay(current.t*1000),signal:assessment.status,score:assessment.score,
+  results.push({index:i,day:helsinkiDay(current.t*1000),signal:assessment.status,score:assessment.score,
    price:assessment.close,laterPrice:later.price,
    changePct:(later.price/assessment.close-1)*100,horizon:"5 seuraavaa havaintoa"});
  }
@@ -27,7 +27,12 @@ export function backtestSwingHistory(raw,maxCases=35){
  const average=arr=>arr.length?arr.reduce((sum,r)=>sum+r.changePct,0)/arr.length:null;
  const mean=average(candidates),baselineMean=average(results);
  const positive=candidates.filter(r=>r.changePct>0).length;
- return {rows:results,candidates:candidates.length,mean,baselineMean,positiveCount:positive,
+ const independent=[];let lastEnd=-1;
+ for(const candidate of candidates){
+  if(candidate.index>lastEnd){independent.push(candidate);lastEnd=candidate.index+5}
+ }
+ const independentMean=average(independent),independentPositive=independent.filter(r=>r.changePct>0).length;
+ return {rows:results.map(({index,...rest})=>rest),candidates:candidates.length,mean,baselineMean,positiveCount:positive,independentCount:independent.length,independentMean,independentPositive,
   relativeDifference:mean!==null&&baselineMean!==null?mean-baselineMean:null,
-  disclaimer:"Kuvaileva, jälkikäteen laskettu 5 havaintopäivän kurssivertailu. Vertailun jaksot voivat olla päällekkäisiä; otos on pieni ja valikoitunut. Ei kauppojen toteutushintoja, kustannuksia, osinkoja tai riskikorjattua tuottoa. Tulokset eivät ennusta tulevaa."};
+  disclaimer:"Kuvaileva, jälkikäteen laskettu 5 havaintopäivän kurssivertailu. Kaikki jaksot voivat olla päällekkäisiä. Erillinen aikajärjestyksessä valittu, ei-päällekkäinen ehdokasotos on myös pieni ja valikoitunut. Ei kauppojen toteutushintoja, kustannuksia, osinkoja tai riskikorjattua tuottoa. Tulokset eivät ennusta tulevaa."};
 }
