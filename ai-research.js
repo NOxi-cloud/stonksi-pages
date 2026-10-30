@@ -365,7 +365,8 @@ function renderDataQuality(payload){
 }
 const driverPanel=document.createElement("section");
 driverPanel.className="ai-driver-panel";driverPanel.hidden=true;
-qualityPanel.after(driverPanel);
+// Keep detailed report sections first; append the source-backed drivers below them.
+result.after(driverPanel);
 function renderFinancialDrivers(payload){
  driverPanel.replaceChildren();driverPanel.hidden=true;
  const data=normalizedFinancialDrivers(payload);
@@ -487,7 +488,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
   const payload=await response.json();
   if(!response.ok){showIdentityChoices(payload);throw new Error(payload.error||"Palvelinvirhe ("+response.status+")")}
   status.textContent="Analyysi valmis · "+new Date(payload.generated_at).toLocaleString("fi-FI")+" · "+describeDataQuality(payload);
-  renderAnalysis(payload.analysis||"Analyysiteksti puuttuu.");renderDataQuality(payload);renderAnalystSources(payload);
+  renderAnalysis(payload.analysis||"Analyysiteksti puuttuu.");renderDataQuality(payload);renderAnalystSources(payload);renderFinancialDrivers(payload);
   if(payload.analysis){analysisTitle.textContent="Analyysi: "+query;showAnalysis()}
   if(payload.analysis){currentReport={query,analysis:payload.analysis,generated_at:payload.generated_at};saveButton.disabled=false}
  }catch(err){status.textContent=err.name==="AbortError"?"Pyyntö aikakatkaistiin.":("Analyysi epäonnistui: "+err.message)}
