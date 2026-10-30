@@ -2,7 +2,7 @@
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
 export function renderResearchPriorities(host,signals,valuations,stocks,now=Date.now()){
  host.replaceChildren();
- host.append(make("h4","Yhdistetty tutkimisprioriteetti","signal-summary-title"));
+ host.append(make("h4","Tutkimisjärjestys · tekninen tilanne ja arvostus","signal-summary-title"));
  if(!signals.size){host.append(make("p","Laske ensin tekniset signaalit. Tallennettujen arvostusten haku tehdään erikseen omalla painikkeella.","muted"));return}
  const results=[];
  for(const item of stocks.slice(0,30)){
@@ -30,9 +30,11 @@ export function renderResearchPriorities(host,signals,valuations,stocks,now=Date
     notes.push("Tavoitteen ja kurssin erotus "+(delta>=0?"+":"")+delta.toLocaleString("fi-FI",{maximumFractionDigits:1})+" %");
    }else notes.push("Ei ajantasaista vertailukelpoista tavoitehinta–kurssi-paria");
   }else notes.push("Ei tallennettua arvostustietoa");
-  results.push({item,priority,order,why,notes});
+  const technicalScore=(trend==="nouseva"?2:trend==="laskeva"?-2:0)+(s.macd?.bullishCross?2:s.macd?.bearishCross?-2:s.macd?.histogram>0?1:s.macd?.histogram<0?-1:0)+(s.goldenCross?2:0)-(s.deathCross?2:0);
+  notes.unshift("Tekniset pisteet "+(technicalScore>0?"+":"")+technicalScore);
+  results.push({item,priority,order,why,notes,technicalScore});
  }
- results.sort((a,b)=>a.order-b.order||a.item.name.localeCompare(b.item.name,"fi"));
+ results.sort((a,b)=>a.order-b.order||b.technicalScore-a.technicalScore||a.item.name.localeCompare(b.item.name,"fi"));
  const grid=make("div",undefined,"signal-summary-ranking");
  for(const r of results){
   const card=make("article",undefined,"signal-summary-entry");
