@@ -4,6 +4,8 @@ const fmt=n=>Number(n).toLocaleString("fi-FI",{maximumFractionDigits:1});
 export function renderSignalSummary(results,host,total){
  host.replaceChildren();
  const items=[...results.values()],valid=items.filter(x=>x.result),failed=items.length-valid.length;
+ const now=Date.now();
+ const stale=valid.filter(x=>!Number.isFinite(Date.parse(x.result.asOf))||now-Date.parse(x.result.asOf)>5*86400000);
  const heading=el("h4","Signaaliyhteenveto · "+valid.length+"/"+total+" analysoitu","signal-summary-title");
  host.append(heading);
  if(!items.length){host.append(el("p","Yhteenveto muodostuu, kun käynnistät signaalien laskennan.","muted"));return}
@@ -13,7 +15,7 @@ export function renderSignalSummary(results,host,total){
  const highRsi=valid.filter(x=>x.result.overbought).length;
  const lowRsi=valid.filter(x=>x.result.oversold).length;
  const stats=el("div",undefined,"signal-summary-stats");
- for(const [label,value] of [["Nouseva trendi",up],["Laskeva trendi",down],["Neutraali",mixed],["Yliostettu RSI",highRsi],["Ylimyyty RSI",lowRsi],["Puuttuva analyysi",Math.max(0,total-valid.length)]]){
+ for(const [label,value] of [["Nouseva trendi",up],["Laskeva trendi",down],["Neutraali",mixed],["Yliostettu RSI",highRsi],["Ylimyyty RSI",lowRsi],["Puuttuva analyysi",Math.max(0,total-valid.length)],["Yli 5 pv vanhat",stale.length]]){
   const card=el("div",undefined,"signal-summary-stat");card.append(el("strong",String(value)),el("span",label));stats.append(card)
  }
  host.append(stats);
@@ -27,10 +29,14 @@ export function renderSignalSummary(results,host,total){
   if(result.oversold)warnings.push("RSI alle 30: lasku voi jatkua");
   if(result.goldenCross){score+=2;reasons.push("Tuore golden cross")}if(result.deathCross){score-=2;warnings.push("Tuore death cross")}
   if(result.volume?.unusuallyHigh)reasons.push("Poikkeuksellisen korkea volyymi, suunta tarkistettava");
-  const quality=Date.now()-Date.parse(result.asOf)>5*86400000?"Viivästynyt":"Ajantasaisuus tarkistettava";
+  const age=now-Date.parse(result.asOf);
+  const quality=!Number.isFinite(age)||age>5*86400000?"Vanhentunut: tarkista ennen päätöstä":"Historiallinen sulkemishinta";
+  if(!Number.isFinite(age)||age>5*86400000)warnings.push("Hintahavainto yli 5 päivää vanha");
+  if(reasons.length&&warnings.some(w=>/MACD:n laskeva|SMA50 alle|death cross/.test(w)))warnings.push("Tekniset signaalit ristiriidassa");
   return {item,result,score,reasons,warnings,quality};
- }).sort((a,b)=>b.score-a.score||a.item.ticker.localeCompare(b.item.ticker));
+ }).sort((a,b)=>Number(a.quality.startsWith("Vanhentunut"))-Number(b.quality.startsWith("Vanhentunut"))||b.score-a.score||a.item.ticker.localeCompare(b.item.ticker));
  const title=el("h5","Tutkimisjärjestys – teknisten havaintojen perusteella");host.append(title);
+ if(stale.length)host.append(el("p","Huomio: "+stale.length+" osakkeen havainto on yli viisi vuorokautta vanha. Nämä näytetään järjestyksen lopussa.","muted"));
  const list=el("div",undefined,"signal-summary-ranking");
  for(const x of scored){
   const row=el("article",undefined,"signal-summary-entry");
