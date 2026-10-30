@@ -1,3 +1,4 @@
+import {summarizeSignalHistory} from "./stock-signal-metrics.mjs";
 // User-initiated observations; kept on this device and scoped to signed-in user.
 // No network traffic, AI calls, automated price checks or trade execution.
 const MAX_RECORDS=250;
@@ -25,7 +26,12 @@ export function saveSignalHistory(uid,observations){
   for(const x of observations){
    if(!x)continue;
    // Prevent duplicates for the same completed trading session.
-   if(history.some(prev=>prev.ticker===x.ticker&&prev.asOf===x.asOf))continue;
+   const previous=history.find(prev=>prev.ticker===x.ticker&&prev.asOf===x.asOf);
+   if(previous){
+    // Backfill the original close from the same session; preserve previously computed outcomes.
+    if((!Number.isFinite(previous.close)||previous.close<=0)&&Number.isFinite(x.close)&&x.close>0)previous.close=x.close;
+    continue;
+   }
    history.push(x);
   }
   localStorage.setItem("stonksi-signal-history-v1-"+uid,JSON.stringify(history.slice(-MAX_RECORDS)));
@@ -55,7 +61,23 @@ export function renderSignalHistory(host,items){
  const heading=document.createElement("h4");heading.textContent="Signaalien historia";host.append(heading);
  const note=document.createElement("p");note.className="muted";note.textContent="Tallennetaan tämän laitteen selaimeen vain käynnistämiesi laskentojen havainnot. 5/10/20 kaupankäyntipäivän kurssimuutokset täyttyvät seuraavan käyttäjän käynnistämän historiahaun yhteydessä. Ei sisällä osinkoja eikä kuluja.";host.append(note);
  if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="Ei havaintoja vielä.";host.append(p);return}
- const counts=document.createElement("p");counts.className="muted";counts.textContent=[5,10,20].map(n=>n+" pv valmistuneet "+items.filter(x=>Number.isFinite(x.outcomes?.[n])).length+"/"+items.length).join(" · ");host.append(counts);
+ const metrics=summarizeSignalHistory(items);
+ const summary=document.createElement("div");summary.className="signal-summary-stats signal-performance-grid";
+ const fmt=n=>n===null?"—":(n>0?"+":"")+n.toLocaleString("fi-FI",{maximumFractionDigits:2})+" %";
+ for(const m of metrics){
+  const card=document.createElement("section");card.className="signal-summary-stat signal-performance-card";
+  const head=document.createElement("strong");head.textContent=m.days+" kaupankäyntipäivää";
+  const sample=document.createElement("span");sample.textContent="Valmiita "+m.completed+"/"+m.total+" · odottaa "+m.pending;
+  const hits=document.createElement("span");hits.textContent="Suuntaosumat "+m.hits+"/"+m.directional+" · "+(m.hitRate===null?"ei vielä laskettavissa":m.hitRate.toLocaleString("fi-FI",{maximumFractionDigits:1})+" %");
+  const average=document.createElement("span");average.textContent="Keskimääräinen kurssimuutos "+fmt(m.average);
+  const reliability=document.createElement("small");reliability.className="muted";
+  reliability.textContent=m.sufficientSample?"Historiallinen otos, ei ennuste":"Pieni otos: alle 10 valmistunutta suuntahavaintoa";
+  card.append(head,sample,hits,average,reliability);summary.append(card);
+ }
+ host.append(summary);
+ const explanation=document.createElement("p");explanation.className="muted";
+ explanation.textContent="Suuntaosuma: nousevan trendin jälkeen kurssi nousi tai laskevan trendin jälkeen laski. Neutraalit trendit ja keskeneräiset havainnot eivät vaikuta osumaprosenttiin. Keskiarvo sisältää kaikki valmiit havainnot. Ei osinkoja, veroja tai kuluja.";
+ host.append(explanation);
  const list=document.createElement("div");list.className="signal-summary-ranking";
  const ordered=[...items].sort((a,b)=>Date.parse(b.recordedAt)-Date.parse(a.recordedAt)).slice(0,30);
  for(const x of ordered){
