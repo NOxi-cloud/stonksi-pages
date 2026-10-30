@@ -1,3 +1,4 @@
+import {calculateTechnicalSignals,SIGNAL_DESCRIPTIONS} from "./stock-signals.mjs";
 import {PERIODS,validateHistory,priceStats,nearestIndex,cacheIsFresh,quoteIsOld} from "./stock-chart-utils.mjs";
 // On-demand chart only. No automatic polling, no fabricated series, no third-party scripts.
 const host=document.getElementById("stock-chart-detail");
@@ -29,6 +30,12 @@ function render(){
   tabs.append(btn);
  }
  host.append(tabs);
+ const signals=el("section","stock-signals");
+ const title=el("h4","","Tekniset signaalit");signals.append(title);
+ const btn=el("button","secondary-btn","Laske signaalit");btn.type="button";
+ const output=el("div","stock-signals-results");signals.append(btn,output);
+ btn.addEventListener("click",()=>loadSignals(item.ticker,output,btn));
+ host.append(signals);
  const status=el("p","muted");status.id="stock-chart-status";status.setAttribute("role","status");host.append(status);
  const chart=el("div","stock-chart-body");host.append(chart);
  const current=cache.get(item.ticker+"|"+chosen);
@@ -172,6 +179,50 @@ async function load(){
   if(target)target.textContent="Kurssihistoriaa ei voitu hakea: "+(e?.name==="AbortError"?"Aikakatkaisu":e.message);
  }
 }
+
+let signalController=null,signalGeneration=0;
+async function loadSignals(symbol,output,button){
+ const current=++signalGeneration;
+ if(signalController)signalController.abort();
+ const ctrl=new AbortController();signalController=ctrl;
+ output.replaceChildren();button.disabled=true;
+ output.append(el("p","muted","Haetaan yhden vuoden päivähavaintoja…"));
+ try{
+  const db=window.agentSupabaseClient,{data:{session}}=await db.auth.getSession();
+  if(!session?.access_token)throw Error("Kirjaudu ensin sisään.");
+  let info=cache.get(symbol+"|1y");
+  if(!cacheIsFresh(info,"1y")){
+   const timeout=setTimeout(()=>ctrl.abort(),14000);
+   let res;try{res=await fetch(api,{method:"POST",signal:ctrl.signal,headers:{"Authorization":"Bearer "+session.access_token,"apikey":publicKey,"Content-Type":"application/json"},body:JSON.stringify({action:"history",symbol,period:"1y"})})}finally{clearTimeout(timeout)}
+   const data=await res.json().catch(()=>({}));
+   if(!res.ok)throw Error(data.error||"Kurssihistorian haku epäonnistui.");
+   info={data,fetchedAt:now()};cache.set(symbol+"|1y",info);
+  }
+  if(current!==signalGeneration||ctrl.signal.aborted)return;
+  const result=calculateTechnicalSignals(info.data);
+  output.replaceChildren();
+  if(!result){output.append(el("p","muted","Riittävän tuoreita päivähavaintoja ei ole saatavilla (RSI14, SMA50/SMA200). Signaalia ei arvioida."));return}
+  output.append(el("p","muted","Havainto "+new Date(result.asOf).toLocaleDateString("fi-FI")+" · "+result.observationCount+" päivähintaa · epävirallinen lähde."));
+  const signals=[
+   ["RSI(14)",result.rsi14.toLocaleString("fi-FI"),result.overbought?"Yliostettu":result.oversold?"Ylimyyty":"Neutraali"],
+   ["Liukuvat keskiarvot",result.sma50.toLocaleString("fi-FI")+" / "+result.sma200.toLocaleString("fi-FI"),result.trend],
+   ["Risteämä",null,result.goldenCross?"Kultainen risti":result.deathCross?"Kuolonristi":"Ei uutta risteämää viimeisen kahden pörssipäivän aikana"]
+  ];
+  for(const [name,value,state] of signals){
+   const row=el("div","stock-signal-row");
+   row.append(el("strong","",name),el("span","",value?value+" · "+state:state));
+   output.append(row);
+  }
+  for(const [label,key] of [["Yliostettu","overbought"],["Ylimyyty","oversold"],["Kultainen risti","goldenCross"],["Kuolonristi","deathCross"]]){
+   const details=el("details","stock-signal-help"),summary=el("summary","",label);
+   details.append(summary,el("p","muted",SIGNAL_DESCRIPTIONS[key]));output.append(details);
+  }
+  output.append(el("p","muted","Pörssin tarkkailulista: ei tarkistettu. "+SIGNAL_DESCRIPTIONS.exchangeWatch));
+  output.append(el("p","muted",result.disclaimer));
+ }catch(e){if(current===signalGeneration){output.replaceChildren();output.append(el("p","muted","Signaalien laskenta epäonnistui: "+(e?.name==="AbortError"?"Aikakatkaisu":e.message)))}}
+ finally{if(current===signalGeneration){button.disabled=false;signalController=null}}
+}
+
 document.addEventListener("agent:open-stock-chart",e=>{
  const id=e.detail?.id;if(!id)return;
  if(opened===id){opened=null;generation++;cancel();render();return}

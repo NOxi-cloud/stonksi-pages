@@ -130,3 +130,5 @@
  .ai-fy-scenarios-table td,.ai-model-valuation-panel .ai-financial-table td{display:flex;justify-content:space-between;gap:12px;white-space:normal;overflow-wrap:anywhere;text-align:right;padding:5px 0}
  .ai-fy-scenarios-table td:before,.ai-model-valuation-panel .ai-financial-table td:before{content:attr(data-label);font-weight:600;text-align:left;color:var(--muted);flex:0 1 50%}
 }
+
+.stock-signals{padding:12px;margin:12px 0;border:1px solid var(--border);border-radius:12px;min-width:0}.stock-signals h4{margin:0 0 10px}.stock-signals-results{min-width:0}.stock-signal-row{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}.stock-signal-help{padding:9px 0;border-bottom:1px solid var(--border)}.stock-signal-help summary{cursor:pointer}
