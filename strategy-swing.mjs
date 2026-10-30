@@ -1,12 +1,20 @@
 // EOD swing-screening research. Never treat an in-progress daily candle as settled.
 import {validateHistory} from "./stock-chart-utils.mjs";
-const helsinkiParts=ms=>{const d=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Helsinki",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(ms);const v=Object.fromEntries(d.map(x=>[x.type,x.value]));return {day:v.year+"-"+v.month+"-"+v.day,minutes:Number(v.hour)*60+Number(v.minute)}};
+const marketFor=symbol=>{
+ if(typeof symbol!=="string")return null;
+ if(/\.HE$/i.test(symbol))return {zone:"Europe/Helsinki",close:18*60+45};
+ if(/^[A-Z][A-Z0-9-]{0,9}$/.test(symbol))return {zone:"America/New_York",close:16*60+15};
+ return null;
+};
+const marketParts=(ms,zone)=>{const d=new Intl.DateTimeFormat("en-CA",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(ms);const v=Object.fromEntries(d.map(x=>[x.type,x.value]));return {day:v.year+"-"+v.month+"-"+v.day,minutes:Number(v.hour)*60+Number(v.minute)};};
 export function evaluateSwingCandidate(raw,receivedAt=Date.now()){
  const history=validateHistory(raw);
  if(raw?.period!=="1y"||!history||history.length<205||history.length>360||raw.price_kind!=="unadjusted_close"||!Number.isFinite(receivedAt))return {status:"insufficient_data",reason:"Päiväkurssisarja puuttuu tai ei ole vertailukelpoinen."};
- const now=helsinkiParts(receivedAt),lastPoint=history.at(-1);
- // Helsinki equities regular trading finishes 18:30 local. Conservative 15 minute data buffer.
- const unfinished=helsinkiParts(lastPoint.t*1000).day===now.day && now.minutes<18*60+45;
+ const market=marketFor(raw.symbol);
+ if(!market)return {status:"insufficient_data",reason:"Swing-päiväkynttilän valmistumista voidaan varmistaa vain Helsingin (.HE) ja Yhdysvaltain osakkeille. Muiden markkinoiden tarkistus on toistaiseksi estetty."};
+ const now=marketParts(receivedAt,market.zone),lastPoint=history.at(-1);
+ // Local exchange close + conservative 15-minute data buffer; never assume a US session ends at Helsinki close.
+ const unfinished=marketParts(lastPoint.t*1000,market.zone).day===now.day && now.minutes<market.close;
  const p=unfinished?history.slice(0,-1):history;
  if(p.length<205)return {status:"insufficient_data",reason:"Vahvistettuja päivähavaintoja ei ole riittävästi.",provisional:unfinished};
  const last=p.at(-1),marketAt=last.t*1000;
