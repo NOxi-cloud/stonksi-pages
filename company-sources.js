@@ -50,7 +50,7 @@ if(root&&db){
    addRow(prhSection,"Rekisterinimi",prh.name);
    addRow(prhSection,"Y-tunnus",prh.business_id);
    const link=safeLink(prh.source_url,["avoindata.prh.fi"],"Avaa PRH:n hakulähde");
-   if(link)prhSection.append(link);
+   if(link){const wrap=el("div",undefined,"company-source-link");wrap.append(link);prhSection.append(wrap);}
    prhSection.append(el("p","Yrityksen nimiosuma – ei vielä vahvistettua pörssiosakkeen, ISINin tai osakemäärän vastaavuutta.","muted"));
   }else prhSection.append(el("p","PRH:n yksiselitteistä nimiosumaa ei saatu. Tämä ei tarkoita, ettei yhtiötä olisi rekisterissä.","muted"));
   card.append(prhSection);
@@ -58,15 +58,23 @@ if(root&&db){
   esefSection.append(el("h5","ESEF / XBRL-raporttihakemisto"));
   addRow(esefSection,"Haun tila",({candidate:"Raporttiehdokkaita löytyi",ambiguous:"Useita liikkeeseenlaskijoita",not_found:"Ei hakemisto-osumia",unavailable:"Hakemisto ei vastannut",skipped:"Ei voitu suorittaa"}[esef?.status]||"Ei tietoa"));
   const candidates=Array.isArray(esef?.candidates)?esef.candidates.slice(0,3):[];
-  for(const item of candidates){
+  const groups=new Map();
+  for(const item of candidates){const period=String(item.period_end||"Tuntematon");if(!groups.has(period))groups.set(period,[]);groups.get(period).push(item)}
+  for(const [period,variants] of groups){
+   const periodHeading=el("h5","Tilikausi "+period);periodHeading.className="company-source-period";esefSection.append(periodHeading);
+   for(const item of variants){
    const entry=el("div",undefined,"company-source-filing");
    addRow(entry,"Yhtiö",item.issuer_name);
+   const parsedLang=typeof item.json_url==="string"?item.json_url.match(/-([a-z]{2})\.json(?:$|\?)/i)?.[1]?.toLowerCase():null;
+   const language=({fi:"Suomi",en:"Englanti",sv:"Ruotsi"})[parsedLang]||"Muu kieli";
+   addRow(entry,"Julkaisun kieli",language);
    addRow(entry,"Tilikausi päättyi",item.period_end);
    addRow(entry,"LEI",item.issuer_lei);
    const link=safeLink(item.viewer_url||item.json_url,["filings.xbrl.org"],"Avaa raporttimerkintä");
-   if(link)entry.append(link);
+   if(link){const wrap=el("div",undefined,"company-source-link");wrap.append(link);entry.append(wrap);}
    entry.append(el("small","Hakemistoehdokas – sisältöä ja lukuja ei vielä varmennettu."));
    esefSection.append(entry);
+   }
   }
   card.append(esefSection);
   card.append(el("p","Tässä vaiheessa ei vielä lasketa DCF-, EV/EBIT- tai P/FCF-arvostuksia ilman varmennettuja tilinpäätöslukuja ja osakemäärää.","muted"));
@@ -109,6 +117,7 @@ if(root&&db){
    render(data);
    status.textContent=data.cached?"Ladattu aiemmin tallennetuista tiedoista.":"Lähdehakemistot tarkistettu. Ei AI-kustannusta.";
    await readSaved();
+   if(id===requestId)status.textContent=data.cached?"Ladattu aiemmin tallennetuista tiedoista.":"Lähdehakemistot tarkistettu. Ei AI-kustannusta.";
   }catch(error){if(id===requestId)status.textContent=error?.name==="AbortError"?"Lähdehaku aikakatkaistiin.":error?.message||"Lähdehaku epäonnistui."}
   finally{busy=false;run.disabled=false;refresh.disabled=false}
  }
