@@ -62,7 +62,7 @@ function setIndicator(state,label){
   synced:["Pilviyhteys toimii","Tiedot synkronoitu"],
   syncing:["Synkronoidaan…","Siirretään muutoksia pilveen"],
   pending:["Synkronointi odottaa",label],
-  error:["Synkronointivirhe","Tarkista yhteys ja asetukset"],
+  error:["Synkronointivirhe","Pilvitietojen lataus epäonnistui – tarkista asetukset"],
   offline:["Ei verkkoyhteyttä","Muutokset odottavat verkkoa"],
   local:["Paikallinen tila","Kirjaudu sisään synkronoidaksesi"]
  };
@@ -121,7 +121,7 @@ async function onSession(session){
  if(cached){window.agentTaskBridge?.set(overlay(cached,pending(uid)));ready=true;}
  message("Ladataan pilvitehtäviä…");
  if(!navigator.onLine){message("Offline-tila: muutokset tallentuvat jonoon.");return;}
- try{await loadCloud(uid,version);if(version!==sessionVersion||user?.id!==uid)return;ready=true;syncIndicator();await flushQueue();}catch(e){if(version===sessionVersion)message("Pilvilataus epäonnistui: "+e.message+(cached?" – paikalliset tehtävät käytössä.":""));}
+ try{await loadCloud(uid,version);if(version!==sessionVersion||user?.id!==uid)return;ready=true;syncIndicator();await flushQueue();}catch(e){if(version===sessionVersion){syncError=e;message("Pilvilataus epäonnistui: "+e.message+(cached?" – paikalliset tehtävät käytössä.":""));}}
 }
 // Turnstile is public client-side challenge; Supabase Auth verifies its token server-side once CAPTCHA is enabled.
 const TURNSTILE_SITE_KEY="0x4AAAAAAFaAPsjoYFC8GWDo";
