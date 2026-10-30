@@ -1,5 +1,5 @@
 import {calculateTechnicalSignals} from "./stock-signals.mjs";
-import {makeSignalObservation,loadSignalHistory,saveSignalHistory,renderSignalHistory} from "./stock-signal-history.mjs";
+import {makeSignalObservation,loadSignalHistory,saveSignalHistory,updateSignalOutcomes,renderSignalHistory} from "./stock-signal-history.mjs";
 import {renderResearchPriorities} from "./stock-research-priorities.mjs";
 import {renderSignalSummary} from "./stock-signal-summary.mjs";
 import {getCachedDaily,storeCachedDaily} from "./stock-history-cache.mjs";
@@ -131,7 +131,7 @@ signalButton.addEventListener("click",async()=>{
     if(ownRun!==signalRun)break;
     const result=calculateTechnicalSignals(raw);
     signalResults.set(item.id,{item,result});
-    if(result){const observation=makeSignalObservation(item,result);if(observation)saveSignalHistory(session.user.id,[observation]);}
+    if(result){const observation=makeSignalObservation(item,result,Date.now(),raw);if(observation)saveSignalHistory(session.user.id,[observation]);updateSignalOutcomes(session.user.id,observation.ticker,raw);}
     signalRows.append(signalCard(item,result,"RSI- ja trenditietoja ei voitu laskea."));
     refreshSignalSummary();
    }catch(error){if(ownRun===signalRun){signalResults.set(item.id,{item,result:null});signalRows.append(signalCard(item,null,"Haku epäonnistui: "+error.message));refreshSignalSummary()}}
