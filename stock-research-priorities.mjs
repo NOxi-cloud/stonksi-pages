@@ -38,7 +38,13 @@ export function renderResearchPriorities(host,signals,valuations,stocks,now=Date
  const grid=make("div",undefined,"signal-summary-ranking");
  for(const r of results){
   const card=make("article",undefined,"signal-summary-entry");
-  card.append(make("strong",r.item.name+" · "+r.item.ticker),make("span",r.priority),make("small",r.why,"muted"),make("small",r.notes.join(" · "),"muted"));grid.append(card);
+  const heading=make("strong",r.item.name+" · "+r.item.ticker);
+  const priority=make("span",r.priority+" · tekniset pisteet "+(r.technicalScore>0?"+":"")+r.technicalScore);
+  const reason=make("small",r.why,"muted");
+  const detail=make("details",undefined,"signal-priority-details");
+  detail.append(make("summary","Näytä tekniset tiedot ja arvostus"));
+  detail.append(make("p",r.notes.filter(x=>!x.startsWith("Tekniset pisteet")).join(" · "),"muted"));
+  card.append(heading,priority,reason,detail);grid.append(card);
  }
  host.append(make("p",results.length+" osakkeen tutkimisjärjestys. Merkinnät kertovat seuraavan tarkistettavan asian, eivät osto- tai myyntisuositusta.","muted"),grid);
 }
