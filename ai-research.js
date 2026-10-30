@@ -346,7 +346,7 @@ function renderDataQuality(payload){
   note.append(heading,p);qualityPanel.append(note);
  }
  const registry=q.prh_registry;
- if(registry?.status==="registry_name_match_not_equity_verified"&&typeof registry.business_id==="string"&&/^\\d{7}-\\d$/.test(registry.business_id)){
+ if(registry?.status==="registry_name_match_not_equity_verified"&&typeof registry.business_id==="string"&&/^\d{7}-\d$/.test(registry.business_id)){
   const block=document.createElement("p");block.className="muted";
   block.textContent="PRH:n yritystieto: "+String(registry.name||"").slice(0,120)+" · Y-tunnus "+registry.business_id+". Ei osakelajin tai osakemäärän varmennus.";
   qualityPanel.append(block);
