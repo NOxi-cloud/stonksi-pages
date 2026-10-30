@@ -42,11 +42,13 @@ const signalReset=make("button","Aloita alusta","secondary-btn");signalReset.typ
 const signalStatus=make("p","", "muted");signalStatus.setAttribute("role","status");
 const signalRows=make("div",undefined,"watchlist-signal-grid");
 const historyHost=make("section",undefined,"watchlist-signal-summary");
+historyHost.hidden=true;
 const historyButton=make("button","Näytä signaalihistoria","secondary-btn");historyButton.type="button";
-historyButton.addEventListener("click",async()=>{const {data:{session}}=await db.auth.getSession();if(!session?.user?.id){signalStatus.textContent="Kirjaudu sisään.";return}renderSignalHistory(historyHost,loadSignalHistory(session.user.id))});
+historyButton.addEventListener("click",async()=>{const {data:{session}}=await db.auth.getSession();if(!session?.user?.id){signalStatus.textContent="Kirjaudu sisään.";return}historyHost.hidden=!historyHost.hidden;if(!historyHost.hidden)renderSignalHistory(historyHost,loadSignalHistory(session.user.id));historyButton.textContent=historyHost.hidden?"Näytä signaalihistoria":"Piilota signaalihistoria"});
 const valuationButton=make("button","Näytä tallennetut arvostukset","secondary-btn");valuationButton.type="button";
 const valuationStatus=make("p","","muted");
 const valuationRows=make("div",undefined,"signal-summary-ranking");
+valuationRows.hidden=true;
 const valuationLookup=new Map();
 const priorityHost=make("section",undefined,"watchlist-signal-summary");
 const refreshPriorities=()=>renderResearchPriorities(priorityHost,signalResults,valuationLookup,stocks());
@@ -65,6 +67,7 @@ valuationButton.addEventListener("click",async()=>{
    const ticker=snap.ticker.trim().toUpperCase();if(!latest.has(ticker))latest.set(ticker,{target,date:report.generated_at});
   }
   valuationLookup.clear();for(const [ticker,value] of latest)valuationLookup.set(ticker,value);
+  valuationRows.hidden=false;
   refreshPriorities();
   let n=0;
   for(const item of stocks().slice(0,30)){
@@ -140,7 +143,7 @@ signalButton.addEventListener("click",async()=>{
   if(ownRun===signalRun)signalStatus.textContent="Käsitelty "+signalOffset+"/"+Math.min(rows.length,30)+" osaketta. Uudet haut tehdään vain pyynnöstä.";
  }finally{if(ownRun===signalRun){signalBusy=false;signalButton.disabled=false}}
 });
-const positions=make("div");
+const positions=make("div",undefined,"stock-positions");
 panel.append(searchForm,matches,actions,status,signalPanel,positions);
 async function request(body){
  const {data:{session}}=await db.auth.getSession();if(!session?.access_token)throw Error("Kirjaudu sisään.");
@@ -198,9 +201,9 @@ function renderPositions(){
   const box=make("div");box.style.cssText="border-top:1px solid #353c50;padding:12px 0";
   box.append(make("strong",item.name+" ("+item.ticker+")"));
   const note=make("p",item.price!=null?"Kurssi "+item.price+" "+(item.currency||"")+" · "+(item.price_time?new Date(item.price_time).toLocaleString("fi-FI"):"ajankohta puuttuu")+" · "+(item.quote_source||"lähde tuntematon"):"Kurssia ei ole haettu.","muted");box.append(note);
-  const form=make("form");form.style.cssText="display:flex;gap:8px;flex-wrap:wrap;align-items:end";
+  const form=make("form",undefined,"stock-position-form");
   const qLabel=make("label","Osakkeita"),qInput=make("input"),cLabel=make("label","Keskihankintahinta"),cInput=make("input");
-  for(const inp of [qInput,cInput]){inp.type="text";inp.inputMode="decimal";inp.style.cssText="display:block;width:125px;padding:10px;margin-top:4px";inp.required=true}
+  for(const inp of [qInput,cInput]){inp.type="text";inp.inputMode="decimal";inp.style.cssText="display:block;width:160px;max-width:100%;padding:10px;margin-top:6px";inp.required=true}
   qInput.value=item.quantity??"";cInput.value=item.average_cost??"";qLabel.append(qInput);cLabel.append(cInput);
   const b=make("button","Tallenna omistus","secondary-btn");b.type="submit";form.append(qLabel,cLabel,b);box.append(form);
   const profit=make("p","","muted");box.append(profit);
