@@ -345,6 +345,12 @@ function renderDataQuality(payload){
   const p=document.createElement("p");p.textContent="Omaa EUR-tavoitehintaa ei lasketa ilman varmennettua vuotuista kassavirtaa, osakelajia/osakemäärää ja hyväksyttyjä vertailukertoimia.";
   note.append(heading,p);qualityPanel.append(note);
  }
+ const registry=q.prh_registry;
+ if(registry?.status==="registry_name_match_not_equity_verified"&&typeof registry.business_id==="string"&&/^\\d{7}-\\d$/.test(registry.business_id)){
+  const block=document.createElement("p");block.className="muted";
+  block.textContent="PRH:n yritystieto: "+String(registry.name||"").slice(0,120)+" · Y-tunnus "+registry.business_id+". Ei osakelajin tai osakemäärän varmennus.";
+  qualityPanel.append(block);
+ }
  const h=document.createElement("strong");h.textContent="Lähtötietojen yhteenveto";qualityPanel.append(h);
  const fmtDate=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?"Aika puuttuu":d.toLocaleString("fi-FI",{dateStyle:"short",timeStyle:"short"})};
  const summary=document.createElement("div");summary.className="ai-quality-summary";
