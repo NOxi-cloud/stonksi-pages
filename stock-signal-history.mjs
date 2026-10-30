@@ -46,11 +46,12 @@ export function updateSignalOutcomes(uid,ticker,raw){
   if(item.ticker!==ticker||!Number.isFinite(item.close)||item.close<=0)continue;
   const i=series.findIndex(p=>Number(p.t)*1000===Date.parse(item.asOf));
   if(i<0)continue;
-  item.outcomes=item.outcomes||{};
+  item.outcomes=item.outcomes||{};item.outcomeDates=item.outcomeDates||{};
   for(const days of [5,10,20]){
-   if(item.outcomes[days]!==undefined||i+days>=series.length)continue;
-   item.outcomes[days]=Math.round(10000*(Number(series[i+days].price)/item.close-1))/100;
-   changed=true;
+   if(i+days>=series.length)continue;
+   const date=new Date(Number(series[i+days].t)*1000).toISOString().slice(0,10);
+   if(item.outcomeDates[days]!==date){item.outcomeDates[days]=date;changed=true}
+   if(!Number.isFinite(item.outcomes[days])){item.outcomes[days]=Math.round(10000*(Number(series[i+days].price)/item.close-1))/100;changed=true}
   }
  }
  if(changed){try{localStorage.setItem("stonksi-signal-history-v1-"+uid,JSON.stringify(history));return true}catch{return false}}
