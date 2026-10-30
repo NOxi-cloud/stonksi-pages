@@ -18,3 +18,36 @@ export function summarizeSignalHistory(observations){
    sufficientSample:directional.length>=10};
  });
 }
+
+const describeGroup=(label,entries,horizon)=>{
+ const values=entries.filter(item=>validOutcome(item,horizon)).map(item=>item.outcomes[horizon]);
+ return {label,count:values.length,mean:values.length?values.reduce((sum,v)=>sum+v,0)/values.length:null,
+  rose:values.filter(v=>v>0).length,unchanged:values.filter(v=>v===0).length,
+  uniqueTickers:new Set(entries.filter(item=>validOutcome(item,horizon)).map(item=>item.ticker)).size,
+  smallSample:values.length<10};
+};
+// Group returns by the stock's own technical conditions at observation time.
+// These are not separate profitable strategies and do not establish a general market regime.
+export function summarizeSignalSegments(observations,horizon=20){
+ if(!HORIZONS.includes(horizon))return [];
+ const items=Array.isArray(observations)?observations:[];
+ const segment=(title,cases)=>({title,groups:cases.map(([label,accept])=>describeGroup(label,items.filter(accept),horizon))});
+ return [
+  segment("Pitkän aikavälin trendi",[
+   ["Nouseva",x=>x?.trend==="nouseva"],
+   ["Laskeva",x=>x?.trend==="laskeva"],
+   ["Neutraali",x=>x?.trend==="neutraali"]
+  ]),
+  segment("MACD-tilanne",[
+   ["Positiivinen",x=>x?.macd==="positiivinen"||x?.macd==="nouseva risteämä"],
+   ["Negatiivinen",x=>x?.macd==="negatiivinen"||x?.macd==="laskeva risteämä"],
+   ["Tieto puuttuu",x=>!["positiivinen","negatiivinen","nouseva risteämä","laskeva risteämä"].includes(x?.macd)]
+  ]),
+  segment("RSI(14)",[
+   ["Alle 30",x=>typeof x?.rsi==="number"&&Number.isFinite(x.rsi)&&x.rsi<30],
+   ["30–70",x=>typeof x?.rsi==="number"&&Number.isFinite(x.rsi)&&x.rsi>=30&&x.rsi<=70],
+   ["Yli 70",x=>typeof x?.rsi==="number"&&Number.isFinite(x.rsi)&&x.rsi>70],
+   ["Tieto puuttuu",x=>typeof x?.rsi!=="number"||!Number.isFinite(x.rsi)]
+  ])
+ ];
+}
