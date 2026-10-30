@@ -283,19 +283,6 @@ function renderAnalystSources(payload){
     const link=document.createElement("a");link.href=url.href;link.target="_blank";
     link.rel="noopener noreferrer";link.textContent="Avaa analyysin alkuperäislähde";
     analystPanel.append(h,value,date,link);
-    const comparison=payload?.data_quality?.analyst_comparison;
-    if(comparison?.status==="comparable"&&
-     typeof comparison.target_difference_pct==="number"&&
-     Number.isFinite(comparison.target_difference_pct)&&
-     typeof comparison.observed_price==="number"&&comparison.observed_price>0){
-     const detail=document.createElement("p");detail.className="muted";
-     detail.textContent="Ero havaittuun kurssiin: "+
-      (comparison.target_difference_pct>0?"+":"")+
-      comparison.target_difference_pct.toLocaleString("fi-FI")+" % (vertailukurssi "+
-      comparison.observed_price.toLocaleString("fi-FI")+" "+opinion.currency+
-      "). Laskennallinen erotus, ei tuottoennuste.";
-     analystPanel.append(detail);
-    }
     analystPanel.hidden=false;return;
    }
   }catch{}
@@ -334,6 +321,36 @@ function renderDataQuality(payload){
   price.textContent=target.price.toLocaleString("fi-FI",{minimumFractionDigits:2,maximumFractionDigits:2})+" "+target.currency;
   const note=document.createElement("p");note.textContent=target.kind==="conditional_model_price"?"Ehdollinen P/FCF-arvo – ei vahvistettu 12 kk tavoitehinta tai kurssiennuste.":String(target.note||"Varmennettu analyytikon arvio.").slice(0,250);
   card.append(h,price,note);
+  // The exact analyst opinion has already passed server-side issuer and citation checks.
+  // Verify the quote/target pairing again before presenting a percentage in the main card.
+  const compare=q.analyst_comparison,opinion=q.analyst_opinion;
+  if(target.kind==="verified_analyst_target"&&
+    compare?.status==="comparable"&&opinion?.provider==="Inderes"&&
+    opinion.ticker===payload?.ticker&&opinion.currency===target.currency&&
+    opinion.published_at===target.published_at&&Number.isFinite(opinion.target_price)&&
+    Math.abs(opinion.target_price-target.price)<0.011&&
+    q.quote_available===true&&q.quote_stale===false&&q.quote_currency===target.currency&&
+    q.quote_observed_at===compare.observed_at&&
+    typeof compare.observed_at==="string"&&Number.isFinite(Date.parse(compare.observed_at))&&
+    Number.isFinite(q.quote_age_hours)&&q.quote_age_hours>=0&&q.quote_age_hours<=96&&
+    Number.isFinite(compare.observed_price)&&compare.observed_price>0&&
+    Number.isFinite(compare.target_difference_pct)){
+    const recalculated=100*(target.price/compare.observed_price-1);
+    if(Number.isFinite(recalculated)&&Math.abs(recalculated-compare.target_difference_pct)<0.06){
+     const p=document.createElement("p");p.className="ai-price-target-change";
+     p.textContent="Erotus havaittuun kurssiin "+
+      compare.observed_price.toLocaleString("fi-FI",{minimumFractionDigits:2,maximumFractionDigits:2})+
+      " "+target.currency+": "+(recalculated>=0?"+":"")+
+      recalculated.toLocaleString("fi-FI",{minimumFractionDigits:1,maximumFractionDigits:1})+
+      " % (havainto "+new Date(compare.observed_at).toLocaleDateString("fi-FI")+"). Ei tuottoennuste.";
+     card.append(p);
+    }
+  }
+  if(target.kind==="verified_analyst_target"&&target.published_at){
+   const sourceDate=document.createElement("p");sourceDate.className="muted";
+   sourceDate.textContent="Analyytikon arvion päiväys: "+target.published_at+" · lähdetieto tarkistettava ennen kaupankäyntiä.";
+   card.append(sourceDate);
+  }
   const own=q.independent_price_scenarios;
   if(target.kind==="conditional_model_price"&&own?.status==="assumption_based_price_scenarios_not_analyst_target"&&
      own.currency===target.currency&&q.quote_currency===target.currency&&q.quote_available===true&&q.quote_stale===false&&
@@ -365,8 +382,20 @@ function renderDataQuality(payload){
  if(eur&&eur.status==="awaiting_verified_eur_valuation_inputs"&&Array.isArray(eur.missing)){
   const note=document.createElement("details");note.className="ai-quality-details";
   const heading=document.createElement("summary");heading.textContent="EUR-arvostus: puuttuvat varmennukset";
-  const p=document.createElement("p");p.textContent="Omaa EUR-tavoitehintaa ei lasketa ilman varmennettua vuotuista kassavirtaa, osakelajia/osakemäärää ja hyväksyttyjä vertailukertoimia.";
-  note.append(heading,p);qualityPanel.append(note);
+  const p=document.createElement("p");
+  p.textContent="Stonksin oma EUR-osakearvo edellyttää yhtiökohtaista, varmistettua aineistoa. Inderesin tavoitehinta on eri lähde kuin Stonksin oma arvostus.";
+  note.append(heading,p);
+  const explanations={
+   verified_annual_eur_cash_flow:"Vuotuinen konsernitason EUR-kassavirta ja tilinpäätöksen lähde",
+   verified_issuer_and_share_class_count:"Oikean pörssiosakelajin sekä osakemäärän varmennus",
+   reviewed_company_comparison_multiples:"Yhtiölle perustellut, erikseen hyväksytyt P/FCF-vertailukertoimet"
+  };
+  const list=document.createElement("ul");list.className="feature-list";
+  for(const key of [...new Set(eur.missing)].filter(k=>Object.hasOwn(explanations,k))){
+   const item=document.createElement("li");item.textContent=explanations[key];list.append(item);
+  }
+  if(list.childElementCount)note.append(list);
+  qualityPanel.append(note);
  }
  const registry=q.prh_registry;
  if(registry?.status==="registry_name_match_not_equity_verified"&&typeof registry.business_id==="string"&&/^\d{7}-\d$/.test(registry.business_id)){
