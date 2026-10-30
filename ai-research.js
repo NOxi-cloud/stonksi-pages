@@ -629,14 +629,14 @@ loadButton.addEventListener("click",async()=>{
  if(error)throw error;
  reportList.replaceChildren();
  for(const report of data){
- const row=document.createElement("div");row.style.cssText="border-top:1px solid #353c50;padding:12px 0;display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:8px;align-items:start";
+ const row=document.createElement("div");row.className="ai-saved-report-row";
  const open=document.createElement("button");open.type="button";open.textContent=report.query+" · "+new Date(report.generated_at).toLocaleString("fi-FI");
- open.style.cssText="min-width:0;max-width:100%;text-align:left;white-space:normal;overflow-wrap:anywhere";
+ open.className="ai-saved-report-open";
  open.addEventListener("click",()=>{const restored=restoreAnalysisSnapshot(report);renderAnalysis(report.analysis,restored);renderDataQuality(restored);renderAnalystSources(restored);renderFinancialDrivers(restored);if(!restored)saveStatus.textContent="Vanha tallenne sisältää vain tekstin. Arvostustiedot palautuvat uusiin tallennuksiin.";status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI")+(restored?" · Arvostustiedot tallennettu":" · Vanha tekstitallenne: arvostustietoja ei tallennettu");analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");saveStatus.textContent="";analysisHeader.scrollIntoView({behavior:"smooth",block:"start"})});
- const menu=document.createElement("details");menu.style.cssText="position:relative;justify-self:end;width:44px";
+ const menu=document.createElement("details");menu.className="ai-saved-report-menu";
  const toggle=document.createElement("summary");toggle.textContent="⋮";toggle.setAttribute("aria-label","Analyysin toiminnot: "+report.query);toggle.style.cssText="cursor:pointer;display:grid;place-items:center;width:44px;height:44px;border:1px solid #777;border-radius:8px;background:#303849;color:#fff;font-size:22px;list-style:none";
  menu.append(toggle);
- const actions=document.createElement("div");actions.style.cssText="display:flex;flex-direction:column;gap:8px;position:absolute;right:0;top:46px;z-index:5;min-width:185px;padding:10px;background:#242b3a;border:1px solid #535c73;border-radius:10px;box-shadow:0 6px 18px #0009";
+ const actions=document.createElement("div");actions.className="ai-saved-report-actions";
  const update=document.createElement("button");update.type="button";update.textContent="Päivitä analyysi";
  update.addEventListener("click",async()=>{
  if(!confirm("Päivitetäänkö analyysi: "+report.query+"? Tämä käyttää yhden AI-analyysikiintiön."))return;
@@ -654,8 +654,8 @@ loadButton.addEventListener("click",async()=>{
   try{response=await fetch("https://ywrnmfozoyniftkzcopt.supabase.co/functions/v1/stock-reseach",{
    method:"POST",signal:controller.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":"sb_publishable_7wcqNJq1vLpbM_RgkoEyQQ_2VLq9cqE"},body:JSON.stringify({query:report.query})
   })}finally{clearTimeout(timeout)}
-  const payload=await response.json();
-  if(!response.ok)throw Error(payload.error||"AI-palvelinvirhe ("+response.status+")");
+  const payload=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error((typeof payload.error==="string"&&payload.error.slice(0,220))||"AI-palvelinvirhe (HTTP "+response.status+"). Tallennettu analyysi säilyi ennallaan.");
   if(!payload.analysis)throw Error("Analyysiteksti puuttuu");
   const generatedAt=payload.generated_at||new Date().toISOString();
   const {data:updated,error}=await db.from("ai_research_reports").update({analysis:payload.analysis,analysis_snapshot:createAnalysisSnapshot(payload),generated_at:generatedAt,live_data:false}).eq("id",report.id).eq("user_id",session.user.id).select("id");
