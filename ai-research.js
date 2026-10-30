@@ -3,6 +3,7 @@ import {describeEvidence,stripResearchIdentityBanner} from "./ai-data-quality.mj
 import {normalizedFinancialDrivers} from "./ai-financial-drivers.mjs";
 import {extractOperatingScenarioBlock,formatScenarioAmount,formatScenarioPercent} from "./ai-scenarios.mjs";
 import {normalizedScenarioImpact} from "./ai-scenario-impact.mjs";
+import {normalizedScenarioAssumptions} from "./ai-scenario-assumptions.mjs";
 // Research UI: explicit user-triggered AI request, never runs trades.
 const db=window.agentSupabaseClient;
 const view=document.getElementById("view-research");
@@ -213,7 +214,21 @@ function renderAnalysis(raw,payload=null){
    table.append(tbody);
    const assumptions=document.createElement("p");assumptions.textContent="Oletukset: Bear "+info.rows[0].revenueChange+" % liikevaihto / "+info.rows[0].marginChange+" %-yks. marginaali; Base 0 / 0; Bull +"+info.rows[2].revenueChange+" % / +"+info.rows[2].marginChange+" %-yks. Luvut ovat skenaario-oletuksia, eivät ennusteita.";
    const caveat=document.createElement("p");caveat.textContent="Mekaaninen laskelma, ei tulosennuste, osakekurssin tavoitehinta tai sijoitussuositus.";
-   panel.append(heading,period,table,assumptions,caveat);
+   panel.append(heading,period,table,assumptions);
+   const provenanceData=normalizedScenarioAssumptions(currentImpactPayload,info);
+   if(provenanceData){
+    const provenance=document.createElement("div");provenance.className="ai-assumption-provenance";
+    const heading=document.createElement("strong");heading.textContent=provenanceData.mode==="verified_comparison_bounded"?"Oletusten lähde: varmennettu vertailukausi":"Oletusten lähde: yleinen herkkyystesti";
+    const explanation=document.createElement("p");explanation.textContent=provenanceData.explanation;
+    provenance.append(heading,explanation);
+    if(provenanceData.historical){
+     const actual=document.createElement("p");actual.textContent="Havaittu vertailumuutos: liikevaihto "+formatScenarioPercent(provenanceData.historical.revenue_growth_pct,2)+" %, marginaali "+formatScenarioPercent(provenanceData.historical.margin_change_pp,2)+" %-yks.";
+     provenance.append(actual);
+    }
+    const link=document.createElement("a");link.href=provenanceData.source_url;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Avaa alkuperäinen raporttilähde";provenance.append(link);
+    panel.append(provenance);
+   }
+   panel.append(caveat);
    const impact=normalizedScenarioImpact(currentImpactPayload,info);
    if(impact){
     const impactDetails=document.createElement("details");impactDetails.className="ai-impact-details";
