@@ -136,3 +136,16 @@
 .watchlist-signals{margin:16px 0;padding:16px;border:1px solid var(--border);border-radius:12px;min-width:0}.watchlist-signal-actions{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}.watchlist-signal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}.watchlist-signal-card{min-width:0;padding:13px;border:1px solid var(--border);border-radius:11px;background:#191d2b}.watchlist-signal-card strong{display:block;margin-bottom:10px;overflow-wrap:anywhere}.watchlist-signal-line{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:7px 0;border-top:1px solid var(--border)}.watchlist-signal-line span:last-child{text-align:right;overflow-wrap:anywhere}.watchlist-signal-card small{display:block;margin-top:8px}
 
 .strategy-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.strategy-field,.strategy-form label{display:flex;flex-direction:column;gap:5px;margin:10px 0}.strategy-field input,.strategy-form input,.strategy-form textarea,.strategy-form select{width:100%;min-width:0;padding:11px;border:1px solid var(--border);border-radius:9px;background:#151a27;color:var(--text)}.strategy-form{display:grid;gap:10px;margin:13px 0}.strategy-form textarea{min-height:80px}.strategy-columns>.panel{min-width:0}@media(max-width:840px){.strategy-columns{grid-template-columns:1fr}}@media(max-width:700px){.nav-item{font-size:8px;padding:4px 0}.nav-list{gap:0}.nav-item>span{font-size:16px}}
+
+/* Watchlist signal summary: responsive, separate from individual signal cards. */
+.watchlist-signal-summary{margin:16px 0 20px;min-width:0}
+.signal-summary-title{margin:0 0 12px;font-size:1.05rem}
+.signal-summary-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin-bottom:14px}
+.signal-summary-stat{display:flex;flex-direction:column;gap:4px;padding:13px;border:1px solid #353c50;border-radius:10px;background:#161b29;min-width:0}
+.signal-summary-stat strong{font-size:1.45rem;font-variant-numeric:tabular-nums}
+.signal-summary-stat span{color:#c2c7d3;font-size:.81rem;overflow-wrap:anywhere}
+.signal-summary-ranking{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px;margin:12px 0}
+.signal-summary-entry{display:flex;flex-direction:column;gap:7px;min-width:0;padding:14px;border:1px solid #353c50;border-radius:10px;background:#161b29;overflow-wrap:anywhere}
+.signal-summary-entry>span{font-size:.91rem}
+.signal-summary-entry small{line-height:1.5}
+@media(max-width:600px){.signal-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.signal-summary-ranking{grid-template-columns:minmax(0,1fr)}}
