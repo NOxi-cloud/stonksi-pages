@@ -112,3 +112,21 @@
 #sidebar-sync-status[data-state="offline"] .connection-dot{background:var(--amber)}
 .ai-price-target-card[data-available="false"]{border-color:var(--border)}
 .ai-price-target-card .ai-price-target-change{font-weight:600;margin:6px 0 0}
+
+
+/* Own stock valuation follows the quarterly report, never a top-level analyst target. */
+.ai-model-valuation-panel{min-width:0;margin:18px 0;padding:14px;border:1px solid #353c50;border-radius:12px}
+.ai-model-valuation-panel>h3{margin:0 0 12px;font-size:16px}
+.ai-model-valuation-panel .ai-price-target-card{margin:0 0 12px}
+.ai-model-valuation-panel .ai-pe-panel{margin-top:12px}
+.ai-financial-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px}
+.ai-financial-table th,.ai-financial-table td{text-align:right;border-bottom:1px solid #353c50;padding:10px 7px}
+.ai-financial-table th:first-child,.ai-financial-table td:first-child{text-align:left}
+@media(max-width:700px){
+ .ai-fy-scenarios-table,.ai-model-valuation-panel .ai-financial-table{display:block;min-width:0;width:100%}
+ .ai-fy-scenarios-table thead,.ai-model-valuation-panel .ai-financial-table thead{display:none}
+ .ai-fy-scenarios-table tbody,.ai-model-valuation-panel .ai-financial-table tbody{display:grid;gap:9px}
+ .ai-fy-scenarios-table tr,.ai-model-valuation-panel .ai-financial-table tr{display:grid;gap:5px;min-width:0;padding:10px;border:1px solid #353c50;border-radius:9px}
+ .ai-fy-scenarios-table td,.ai-model-valuation-panel .ai-financial-table td{display:flex;justify-content:space-between;gap:12px;white-space:normal;overflow-wrap:anywhere;text-align:right;padding:5px 0}
+ .ai-fy-scenarios-table td:before,.ai-model-valuation-panel .ai-financial-table td:before{content:attr(data-label);font-weight:600;text-align:left;color:var(--muted);flex:0 1 50%}
+}

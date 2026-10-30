@@ -284,6 +284,7 @@ function renderDataQuality(payload){
  const q=payload?.data_quality;
  if(!q){qualityPanel.hidden=true;return}
  qualityPanel.hidden=false;
+ let deferredModelCard=null;
  const target=payload?.data_quality?.price_target_view;
  const targetIsAvailable=target&&["verified_analyst_target","conditional_model_price"].includes(target.kind)&&
    typeof target.price==="number"&&Number.isFinite(target.price)&&target.price>0&&
@@ -358,7 +359,8 @@ function renderDataQuality(payload){
   if(target.kind==="verified_analyst_target"&&typeof target.source_url==="string"){
    try{const u=new URL(target.source_url);if(u.protocol==="https:"&&["inderes.fi","www.inderes.fi"].includes(u.hostname)){const link=document.createElement("a");link.href=u.href;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Avaa alkuperäinen analyysi";card.append(link)}}catch{}
   }
-  qualityPanel.append(card);
+  if(target.kind==="conditional_model_price")deferredModelCard=card;
+  else qualityPanel.append(card);
  }else{
   const card=document.createElement("div");card.className="ai-price-target-card";card.dataset.available="false";
   const heading=document.createElement("strong");heading.textContent="Tavoitehinta ei vielä saatavilla";
@@ -366,48 +368,12 @@ function renderDataQuality(payload){
   note.textContent="Varmennettua analyytikon tavoitehintaa tai turvallisesti laskettavaa osakekohtaista arvoa ei ole saatavilla. Stonksi ei täytä puuttuvia arvoja arvauksilla.";
   card.append(heading,note);qualityPanel.append(card);
  }
- const fy=q.quarterly_fy_price_scenarios;
- if(fy?.status==="conditional_fy_residual_quarters_not_forecast"&&fy.currency==="USD"&&
-    Array.isArray(fy.scenarios)&&fy.scenarios.length===3&&
-    /^https:\/\/data\.sec\.gov\/api\/xbrl\/companyfacts\/CIK\d{10}\.json$/.test(fy.source_url||"")){
-   const detail=document.createElement("details");detail.className="ai-quality-details";
-   const summary=document.createElement("summary");summary.textContent="Q-raportista laskettu koko vuoden arvio (Bear / Base / Bull)";
-   const desc=document.createElement("p");
-   desc.textContent="Kuluvan tilikauden YTD-toteuma + viime vuoden jäljellä olevan jakson oletusherkkyys. Ei toteutunut koko vuoden tulos eikä kurssiennuste.";
-   detail.append(summary,desc);
-   const table=document.createElement("table"),header=document.createElement("tr");
-   for(const label of ["Skenaario","Vuoden FCF (milj. USD)","Osakearvo","Ero havaintokurssiin"]){
-    const th=document.createElement("th");th.textContent=label;header.append(th);
-   }table.append(header);
-   for(const row of fy.scenarios){
-    if(!["Bear","Base","Bull"].includes(row.name)||!Number.isFinite(row.projected_fcf_million_usd)||
-       !Number.isFinite(row.conditional_price)||row.conditional_price<=0||
-       !Number.isFinite(row.potential_change_pct))continue;
-    const tr=document.createElement("tr");
-    for(const value of [row.name,row.projected_fcf_million_usd.toLocaleString("fi-FI"),row.conditional_price.toLocaleString("fi-FI",{minimumFractionDigits:2})+" USD",
-     (row.potential_change_pct>=0?"+":"")+row.potential_change_pct.toLocaleString("fi-FI")+" %"]){
-     const td=document.createElement("td");td.textContent=value;tr.append(td);
-    }table.append(tr);
-   }
-   detail.append(table);
-   if(Number.isFinite(fy.market_implied_p_fcf)&&Number.isFinite(fy.base_assumed_p_fcf)){
-    const multiples=document.createElement("p");multiples.className="muted";
-    multiples.textContent="Havaintokurssin implisiittinen P/FCF "+
-     fy.market_implied_p_fcf.toLocaleString("fi-FI")+"× · Base-mallioletus "+
-     fy.base_assumed_p_fcf.toLocaleString("fi-FI")+"×. Prosentuaalinen ero ei ole ennustettu kurssiliike.";
-    detail.append(multiples);
-   }
-   const caveat=document.createElement("p");caveat.className="muted";
-   caveat.textContent=String(fy.assumptions||"")+" "+String(fy.caveat||"");
-   detail.append(caveat);
-   qualityPanel.append(detail);
- }
  const eur=q.helsinki_eur_valuation;
  if(eur&&eur.status==="awaiting_verified_eur_valuation_inputs"&&Array.isArray(eur.missing)){
   const note=document.createElement("details");note.className="ai-quality-details";
   const heading=document.createElement("summary");heading.textContent="EUR-arvostus: puuttuvat varmennukset";
   const p=document.createElement("p");
-  p.textContent="Stonksin oma EUR-osakearvo edellyttää yhtiökohtaista, varmistettua aineistoa. Inderesin tavoitehinta on eri lähde kuin Stonksin oma arvostus.";
+  p.textContent="Stonksin oma EUR-osakearvo edellyttää yhtiökohtaista, varmistettua aineistoa. Ulkopuolisen analyytikon tavoitehinta ja Stonksin oma arvostus ovat eri asioita.";
   note.append(heading,p);
   const explanations={
    verified_annual_eur_cash_flow:"Vuotuinen konsernitason EUR-kassavirta ja tilinpäätöksen lähde",
@@ -455,6 +421,76 @@ function renderDataQuality(payload){
   }
   qualityPanel.append(section);
  }
+ const fy=q.quarterly_fy_price_scenarios;
+ if(fy?.status==="conditional_fy_residual_quarters_not_forecast"&&fy.currency==="USD"&&
+    Array.isArray(fy.scenarios)&&fy.scenarios.length===3&&
+    /^https:\/\/data\.sec\.gov\/api\/xbrl\/companyfacts\/CIK\d{10}\.json$/.test(fy.source_url||"")){
+   const detail=document.createElement("details");detail.className="ai-quality-details";
+   const summary=document.createElement("summary");summary.textContent="Q-raportista laskettu koko vuoden arvio (Bear / Base / Bull)";
+   const desc=document.createElement("p");
+   desc.textContent="Kuluvan tilikauden YTD-toteuma + viime vuoden jäljellä olevan jakson oletusherkkyys. Ei toteutunut koko vuoden tulos eikä kurssiennuste.";
+   detail.append(summary,desc);
+   const labels=["Skenaario","Vuoden FCF (milj. USD)","Osakearvo","Ero havaintokurssiin"];
+   const table=document.createElement("table");table.className="ai-financial-table ai-fy-scenarios-table";
+   const thead=document.createElement("thead"),header=document.createElement("tr");
+   for(const label of labels){const th=document.createElement("th");th.textContent=label;header.append(th)}
+   thead.append(header);table.append(thead);
+   const tbody=document.createElement("tbody");
+   for(const row of fy.scenarios){
+    if(!["Bear","Base","Bull"].includes(row.name)||!Number.isFinite(row.projected_fcf_million_usd)||
+       !Number.isFinite(row.conditional_price)||row.conditional_price<=0||
+       !Number.isFinite(row.potential_change_pct))continue;
+    const tr=document.createElement("tr");
+    const values=[row.name,row.projected_fcf_million_usd.toLocaleString("fi-FI"),row.conditional_price.toLocaleString("fi-FI",{minimumFractionDigits:2,maximumFractionDigits:2})+" USD",
+     (row.potential_change_pct>=0?"+":"")+row.potential_change_pct.toLocaleString("fi-FI")+" %"];
+    values.forEach((value,i)=>{const td=document.createElement("td");td.dataset.label=labels[i];td.textContent=value;tr.append(td)});
+    tbody.append(tr);
+   }
+   table.append(tbody);detail.append(table);
+   if(Number.isFinite(fy.market_implied_p_fcf)&&Number.isFinite(fy.base_assumed_p_fcf)){
+    const multiples=document.createElement("p");multiples.className="muted";
+    multiples.textContent="Havaintokurssin implisiittinen P/FCF "+
+     fy.market_implied_p_fcf.toLocaleString("fi-FI")+"× · Base-mallioletus "+
+     fy.base_assumed_p_fcf.toLocaleString("fi-FI")+"×. Prosentuaalinen ero ei ole ennustettu kurssiliike.";
+    detail.append(multiples);
+   }
+   const caveat=document.createElement("p");caveat.className="muted";
+   caveat.textContent=String(fy.assumptions||"")+" "+String(fy.caveat||"");
+   detail.append(caveat);
+   qualityPanel.append(detail);
+ }
+ const modelSection=document.createElement("section");modelSection.className="ai-model-valuation-panel";
+ const modelHeading=document.createElement("h3");modelHeading.textContent="Stonksin oma laskennallinen arvostus";
+ modelSection.append(modelHeading);
+ if(deferredModelCard)modelSection.append(deferredModelCard);
+ const own=q.independent_price_scenarios;
+ if(own&&own.status==="assumption_based_price_scenarios_not_analyst_target"&&own.currency==="USD"&&Array.isArray(own.scenarios)&&own.scenarios.length===3){
+  const box=document.createElement("section");box.className="ai-pe-panel";
+  const heading=document.createElement("h4");heading.textContent="Stonksin oma 12 kk arvostusskenaario (ei analyytikon tavoitehinta)";
+  const description=document.createElement("p");description.textContent="Historiallinen vapaa kassavirta "+Number(own.annual_fcf_million_usd).toLocaleString("fi-FI")+" milj. USD; osakemäärä "+Number(own.share_count).toLocaleString("fi-FI")+" (SEC "+own.shares_as_of+").";
+  if(own.calibration?.status==="verified_three_year_fcf_growth_sensitivity"){
+   const context=document.createElement("p");context.className="muted";
+   context.textContent="FCF-muutoshaarukka perustuu kolmeen SEC-vuositilinpäätökseen ("+
+     own.calibration.periods.join(", ")+"). P/FCF-kertoimet 10×/15×/20× ovat edelleen yleisiä herkkyysoletuksia, eivät yhtiökohtaisesti kalibroituja.";
+   box.append(context);
+  }
+  const table=document.createElement("table");table.className="ai-scenario-table ai-financial-table";
+  const head=document.createElement("tr");
+  for(const label of ["Skenaario","FCF-muutos","P/FCF","Ehdollinen osakehinta"]){const th=document.createElement("th");th.textContent=label;head.append(th)}
+  const thead=document.createElement("thead");thead.append(head);table.append(thead);
+  const tbody=document.createElement("tbody");
+  for(const item of own.scenarios){
+   if(!["Bear","Base","Bull"].includes(item.name)||![item.fcf_growth_pct,item.assumed_p_fcf,item.conditional_price].every(Number.isFinite))continue;
+   const tr=document.createElement("tr");
+   for(const [i,value] of [item.name,item.fcf_growth_pct+" %",String(item.assumed_p_fcf),item.conditional_price.toLocaleString("fi-FI",{minimumFractionDigits:2,maximumFractionDigits:2})+" USD"].entries()){const td=document.createElement("td");td.dataset.label=["Skenaario","FCF-muutos","P/FCF","Osakearvo"][i];td.textContent=value;tr.append(td)}
+   tbody.append(tr);
+  }
+  table.append(tbody);
+  const note=document.createElement("p");note.textContent=own.caveat;
+  box.prepend(heading,description);box.append(table,note);modelSection.append(box);
+ }
+
+ if(modelSection.childElementCount>1)qualityPanel.append(modelSection);
  const registry=q.prh_registry;
  if(registry?.status==="registry_name_match_not_equity_verified"&&typeof registry.business_id==="string"&&/^\d{7}-\d$/.test(registry.business_id)){
   const block=document.createElement("p");block.className="muted";
@@ -497,32 +533,6 @@ function renderDataQuality(payload){
   for(const item of series){if(!Number.isFinite(item.change_pct)||!Number.isFinite(item.hypothetical_price))continue;
    const p=document.createElement("p");p.textContent=(item.change_pct>0?"+":"")+item.change_pct+" %: "+item.hypothetical_price.toLocaleString("fi-FI",{maximumFractionDigits:4})+" "+(q.quote_currency||"");nested.append(p)}
   details.append(nested);
- }
- const own=q.independent_price_scenarios;
- if(own&&own.status==="assumption_based_price_scenarios_not_analyst_target"&&own.currency==="USD"&&Array.isArray(own.scenarios)&&own.scenarios.length===3){
-  const box=document.createElement("section");box.className="ai-pe-panel";
-  const heading=document.createElement("h4");heading.textContent="Stonksin oma 12 kk arvostusskenaario (ei analyytikon tavoitehinta)";
-  const description=document.createElement("p");description.textContent="Historiallinen vapaa kassavirta "+Number(own.annual_fcf_million_usd).toLocaleString("fi-FI")+" milj. USD; osakemäärä "+Number(own.share_count).toLocaleString("fi-FI")+" (SEC "+own.shares_as_of+").";
-  if(own.calibration?.status==="verified_three_year_fcf_growth_sensitivity"){
-   const context=document.createElement("p");context.className="muted";
-   context.textContent="FCF-muutoshaarukka perustuu kolmeen SEC-vuositilinpäätökseen ("+
-     own.calibration.periods.join(", ")+"). P/FCF-kertoimet 10×/15×/20× ovat edelleen yleisiä herkkyysoletuksia, eivät yhtiökohtaisesti kalibroituja.";
-   box.append(context);
-  }
-  const table=document.createElement("table");table.className="ai-scenario-table";
-  const head=document.createElement("tr");
-  for(const label of ["Skenaario","FCF-muutos","P/FCF","Ehdollinen osakehinta"]){const th=document.createElement("th");th.textContent=label;head.append(th)}
-  const thead=document.createElement("thead");thead.append(head);table.append(thead);
-  const tbody=document.createElement("tbody");
-  for(const item of own.scenarios){
-   if(!["Bear","Base","Bull"].includes(item.name)||![item.fcf_growth_pct,item.assumed_p_fcf,item.conditional_price].every(Number.isFinite))continue;
-   const tr=document.createElement("tr");
-   for(const value of [item.name,item.fcf_growth_pct+" %",String(item.assumed_p_fcf),item.conditional_price.toLocaleString("fi-FI",{minimumFractionDigits:2,maximumFractionDigits:2})+" USD"]){const td=document.createElement("td");td.textContent=value;tr.append(td)}
-   tbody.append(tr);
-  }
-  table.append(tbody);
-  const note=document.createElement("p");note.textContent=own.caveat;
-  box.append(heading,description,table,note);details.append(box);
  }
  const pe=q.pe_sensitivity;
  if(pe&&Array.isArray(pe.scenarios)&&pe.scenarios.length===3){
