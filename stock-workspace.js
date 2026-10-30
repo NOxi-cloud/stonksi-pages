@@ -39,11 +39,48 @@ const signalButton=make("button","Laske 5 seuraavan osakkeen signaalit","seconda
 const signalReset=make("button","Aloita alusta","secondary-btn");signalReset.type="button";
 const signalStatus=make("p","", "muted");signalStatus.setAttribute("role","status");
 const signalRows=make("div",undefined,"watchlist-signal-grid");
+const valuationButton=make("button","Näytä tallennetut arvostukset","secondary-btn");valuationButton.type="button";
+const valuationStatus=make("p","","muted");
+const valuationRows=make("div",undefined,"signal-summary-ranking");
+valuationButton.addEventListener("click",async()=>{
+ valuationButton.disabled=true;valuationRows.replaceChildren();
+ valuationStatus.textContent="Haetaan vain aiemmin tallennetut yritysanalyysit. Ei AI-kutsuja.";
+ try{
+  const {data:{session}}=await db.auth.getSession();
+  if(!session?.user?.id)throw Error("Kirjautuminen vaaditaan.");
+  const {data,error}=await db.from("ai_research_reports").select("analysis_snapshot,generated_at").eq("user_id",session.user.id).order("generated_at",{ascending:false}).limit(100);
+  if(error)throw error;
+  const latest=new Map();
+  for(const report of data||[]){
+   const snap=report.analysis_snapshot,target=snap?.data_quality?.price_target_view;
+   if(snap?.schema_version!==1||typeof snap.ticker!=="string"||!target||!["verified_analyst_target","conditional_model_price"].includes(target.kind)||!Number.isFinite(target.price)||target.price<=0||typeof target.currency!=="string")continue;
+   const ticker=snap.ticker.trim().toUpperCase();if(!latest.has(ticker))latest.set(ticker,{target,date:report.generated_at});
+  }
+  let n=0;
+  for(const item of stocks().slice(0,30)){
+   const match=latest.get(item.ticker.toUpperCase());if(!match)continue;n++;
+   const {target,date}=match,box=make("article",undefined,"signal-summary-entry");
+   const verified=target.kind==="verified_analyst_target";
+   const targetCurrency=target.currency.toUpperCase();
+   box.append(make("strong",item.name+" · "+item.ticker),make("span",(verified?"Analyytikon tallennettu tavoitehinta":"Ehdollinen Base-laskelma")+" · "+Number(target.price).toLocaleString("fi-FI",{maximumFractionDigits:2})+" "+targetCurrency));
+   const current=Number(item.price),currency=String(item.currency||"").toUpperCase();
+   if(verified&&Number.isFinite(current)&&current>0&&currency===targetCurrency){
+    const pct=(target.price/current-1)*100;
+    box.append(make("small","Vertailu tallennettuun seurantalistan kurssiin "+current.toLocaleString("fi-FI")+" "+currency+": "+(pct>=0?"+":"")+pct.toLocaleString("fi-FI",{maximumFractionDigits:1})+" % · ei tuottoennuste","muted"));
+   }else box.append(make("small","Prosenttivertailu näytetään vain varmennetulle tavoitteelle, kun kurssi ja valuutta ovat vertailukelpoiset.","muted"));
+   const d=Date.parse(date);
+   box.append(make("small","Raportti "+(Number.isFinite(d)?new Date(d).toLocaleDateString("fi-FI"):"päiväys puuttuu")+" · ei päivitetä automaattisesti","muted"));
+   valuationRows.append(box);
+  }
+  valuationStatus.textContent=n?n+" tallennettua arvoa löytyi. Arvostus ja tekninen signaali ovat erillisiä havaintoja.":"Ei yhteensopivia tallennettuja yritysanalyysejä.";
+ }catch(err){valuationStatus.textContent="Arvostusvertailu epäonnistui: "+err.message}
+ finally{valuationButton.disabled=false}
+});
 const signalSummary=make("div",undefined,"watchlist-signal-summary");
 const signalResults=new Map();
 const refreshSignalSummary=()=>renderSignalSummary(signalResults,signalSummary,Math.min(stocks().filter(x=>validSymbol(x.ticker)).length,30));
 signalActions.append(signalButton,signalReset);
-signalPanel.append(signalTitle,signalHelp,signalActions,signalStatus,signalSummary,signalRows);
+signalPanel.append(signalTitle,signalHelp,signalActions,signalStatus,signalSummary,signalRows,valuationButton,valuationStatus,valuationRows);
 refreshSignalSummary();
 let signalOffset=0,signalRun=0,signalBusy=false;
 signalReset.addEventListener("click",()=>{signalRun++;signalOffset=0;signalRows.replaceChildren();signalResults.clear();refreshSignalSummary();signalStatus.textContent="Valmis uuteen hakuun.";signalBusy=false;signalButton.disabled=false;});
