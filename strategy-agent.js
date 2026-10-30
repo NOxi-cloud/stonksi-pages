@@ -45,6 +45,8 @@ function render(){
    }
    if(uid!==expectedUser)return;const v=evaluateSwingCandidate(data,Date.now());swingOutput.replaceChildren();
    swingOutput.append(e("h3",v.status==="watch_candidate"?"Seurantaehdokas":v.status==="no_action"?"Ei toimenpidettä":"Ei riittävästi tietoa"));
+   if(v.rules){const table=e("div",undefined,"swing-rule-grid");const entries=[["200 päivän trendi",v.rules.aboveSma200,"Kurssi "+v.close.toFixed(3)+" € · SMA200 "+v.sma200.toFixed(3)+" €"],["20 päivän huipun ylitys",v.rules.breakout20,"Edellinen huippu "+v.previous20High.toFixed(3)+" €"],["Volyymi yli keskiarvon",v.rules.volumeAboveAverage,"Volyymikerroin "+v.volumeRatio.toFixed(2)+"×"]];swingOutput.append(e("p","Ehtoja täyttyy "+v.passed+"/3 · sääntöpisteet "+v.score+"/100","muted"));for(const [name,ok,detail] of entries){const row=e("div",undefined,"swing-rule-row");row.append(e("strong",(ok?"✓ ":"✕ ")+name),e("span",detail,"muted"));table.append(row)}swingOutput.append(table)}
+   if(v.provisional)swingOutput.append(e("p","Kuluvan päivän keskeneräinen havainto ohitettu. Päätöskurssi vahvistettava erikseen.","muted"));
    for(const line of [v.reason,v.marketAt&&"Markkinahavainto: "+v.marketAt,v.receivedAt&&"Tieto käsitelty: "+v.receivedAt,v.close&&"Viimeisin havaintohinta: "+v.close,v.volumeRatio&&"Vaihto suhteessa 20 päivään: "+v.volumeRatio.toFixed(2)+"×",v.nextStep,v.disclaimer].filter(Boolean))swingOutput.append(e("p",String(line),"muted"));
   }catch(err){if(uid===expectedUser)swingOutput.textContent="Tarkistus ei onnistunut ("+symbol+"): "+err.message+". Tarkista pörssitunnus ja yritä myöhemmin uudelleen."}finally{swingRun.disabled=false}
  };
