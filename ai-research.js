@@ -366,6 +366,35 @@ function renderDataQuality(payload){
   note.textContent="Varmennettua analyytikon tavoitehintaa tai turvallisesti laskettavaa osakekohtaista arvoa ei ole saatavilla. Stonksi ei täytä puuttuvia arvoja arvauksilla.";
   card.append(heading,note);qualityPanel.append(card);
  }
+ const fy=q.quarterly_fy_price_scenarios;
+ if(fy?.status==="conditional_fy_residual_quarters_not_forecast"&&fy.currency==="USD"&&
+    Array.isArray(fy.scenarios)&&fy.scenarios.length===3&&
+    /^https:\/\/data\.sec\.gov\/api\/xbrl\/companyfacts\/CIK\d{10}\.json$/.test(fy.source_url||"")){
+   const detail=document.createElement("details");detail.className="ai-quality-details";
+   const summary=document.createElement("summary");summary.textContent="Q-raportista laskettu koko vuoden arvio (Bear / Base / Bull)";
+   const desc=document.createElement("p");
+   desc.textContent="Kuluvan tilikauden YTD-toteuma + viime vuoden jäljellä olevan jakson oletusherkkyys. Ei toteutunut koko vuoden tulos eikä kurssiennuste.";
+   detail.append(summary,desc);
+   const table=document.createElement("table"),header=document.createElement("tr");
+   for(const label of ["Skenaario","Vuoden FCF (milj. USD)","Osakearvo","Ero havaintokurssiin"]){
+    const th=document.createElement("th");th.textContent=label;header.append(th);
+   }table.append(header);
+   for(const row of fy.scenarios){
+    if(!["Bear","Base","Bull"].includes(row.name)||!Number.isFinite(row.projected_fcf_million_usd)||
+       !Number.isFinite(row.conditional_price)||row.conditional_price<=0||
+       !Number.isFinite(row.potential_change_pct))continue;
+    const tr=document.createElement("tr");
+    for(const value of [row.name,row.projected_fcf_million_usd.toLocaleString("fi-FI"),row.conditional_price.toLocaleString("fi-FI",{minimumFractionDigits:2})+" USD",
+     (row.potential_change_pct>=0?"+":"")+row.potential_change_pct.toLocaleString("fi-FI")+" %"]){
+     const td=document.createElement("td");td.textContent=value;tr.append(td);
+    }table.append(tr);
+   }
+   detail.append(table);
+   const caveat=document.createElement("p");caveat.className="muted";
+   caveat.textContent=String(fy.assumptions||"")+" "+String(fy.caveat||"");
+   detail.append(caveat);
+   qualityPanel.append(detail);
+ }
  const eur=q.helsinki_eur_valuation;
  if(eur&&eur.status==="awaiting_verified_eur_valuation_inputs"&&Array.isArray(eur.missing)){
   const note=document.createElement("details");note.className="ai-quality-details";
