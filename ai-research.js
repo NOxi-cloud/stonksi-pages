@@ -1,3 +1,4 @@
+import {createAnalysisSnapshot,restoreAnalysisSnapshot} from "./ai-saved-snapshot.mjs";
 import {watchlistSuggestions} from "./ai-watchlist-suggestions.mjs";
 import {describeEvidence,stripResearchIdentityBanner} from "./ai-data-quality.mjs";
 import {normalizedFinancialDrivers} from "./ai-financial-drivers.mjs";
@@ -326,6 +327,20 @@ function renderDataQuality(payload){
   }
   const own=q.independent_price_scenarios;
   if(target.kind==="conditional_model_price"&&own?.status==="assumption_based_price_scenarios_not_analyst_target"&&
+    Number.isFinite(own.annual_fcf_per_share)&&own.annual_fcf_per_share>0&&
+    Number.isFinite(own.observed_price)&&own.observed_price>0){
+    const implied=own.observed_price/own.annual_fcf_per_share;
+    const assumed=own.scenarios?.find(s=>s.name==="Base")?.assumed_p_fcf;
+    if(Number.isFinite(implied)&&implied>0&&implied<1000&&Number.isFinite(assumed)){
+      const context=document.createElement("p");context.className="muted";
+      context.textContent="Vertailun syy: havaintokurssin implisiittinen P/FCF "+
+       implied.toLocaleString("fi-FI",{maximumFractionDigits:1})+"×, mutta mallin Base-oletus "+
+       assumed.toLocaleString("fi-FI",{maximumFractionDigits:1})+
+       "×. Ero johtuu pitkälti arvostuskertoimen oletuksesta; tämä ei ole ennustettu kurssilasku.";
+      card.append(context);
+    }
+  }
+  if(target.kind==="conditional_model_price"&&own?.status==="assumption_based_price_scenarios_not_analyst_target"&&
      own.currency===target.currency&&q.quote_currency===target.currency&&q.quote_available===true&&q.quote_stale===false&&
      typeof q.quote_observed_at==="string"&&own.observed_at===q.quote_observed_at&&
      Number.isFinite(q.quote_age_hours)&&q.quote_age_hours>=0&&q.quote_age_hours<=96&&
@@ -528,7 +543,7 @@ saveButton.addEventListener("click",async()=>{
  saveButton.disabled=true;saveStatus.textContent="Tallennetaan...";
  try{
  const user=await currentUser();if(!user)throw Error("Kirjaudu sisään");
- const {error}=await db.from("ai_research_reports").insert({user_id:user.id,query:currentReport.query,analysis:currentReport.analysis,live_data:false,generated_at:currentReport.generated_at});
+ const {error}=await db.from("ai_research_reports").insert({user_id:user.id,query:currentReport.query,analysis:currentReport.analysis,analysis_snapshot:currentReport.analysis_snapshot,live_data:false,generated_at:currentReport.generated_at});
  if(error)throw error;
  saveStatus.textContent="Analyysi tallennettu pilveen.";currentReport=null;
  }catch(err){saveStatus.textContent="Tallennus epäonnistui: "+err.message;saveButton.disabled=false}
@@ -541,14 +556,14 @@ loadButton.addEventListener("click",async()=>{
  loadButton.disabled=true;saveStatus.textContent="Haetaan tallennettuja analyysejä...";
  try{
  const user=await currentUser();if(!user)throw Error("Kirjaudu sisään");
- const {data,error}=await db.from("ai_research_reports").select("id,query,analysis,generated_at").eq("user_id",user.id).order("generated_at",{ascending:false}).limit(20);
+ const {data,error}=await db.from("ai_research_reports").select("id,query,analysis,analysis_snapshot,generated_at").eq("user_id",user.id).order("generated_at",{ascending:false}).limit(20);
  if(error)throw error;
  reportList.replaceChildren();
  for(const report of data){
  const row=document.createElement("div");row.style.cssText="border-top:1px solid #353c50;padding:12px 0;display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:8px;align-items:start";
  const open=document.createElement("button");open.type="button";open.textContent=report.query+" · "+new Date(report.generated_at).toLocaleString("fi-FI");
  open.style.cssText="min-width:0;max-width:100%;text-align:left;white-space:normal;overflow-wrap:anywhere";
- open.addEventListener("click",()=>{renderAnalysis(report.analysis);renderDataQuality(null);renderAnalystSources(null);renderFinancialDrivers(null);status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI");analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");saveStatus.textContent="";analysisHeader.scrollIntoView({behavior:"smooth",block:"start"})});
+ open.addEventListener("click",()=>{const restored=restoreAnalysisSnapshot(report);renderAnalysis(report.analysis,restored);renderDataQuality(restored);renderAnalystSources(restored);renderFinancialDrivers(restored);if(!restored)saveStatus.textContent="Vanha tallenne sisältää vain tekstin. Arvostustiedot palautuvat uusiin tallennuksiin.";status.textContent="Tallennettu analyysi · "+new Date(report.generated_at).toLocaleString("fi-FI")+(restored?" · Arvostustiedot tallennettu":" · Vanha tekstitallenne: arvostustietoja ei tallennettu");analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();reportsVisible=false;reportList.hidden=true;loadButton.textContent="Näytä tallennetut";loadButton.setAttribute("aria-expanded","false");saveStatus.textContent="";analysisHeader.scrollIntoView({behavior:"smooth",block:"start"})});
  const menu=document.createElement("details");menu.style.cssText="position:relative;justify-self:end;width:44px";
  const toggle=document.createElement("summary");toggle.textContent="⋮";toggle.setAttribute("aria-label","Analyysin toiminnot: "+report.query);toggle.style.cssText="cursor:pointer;display:grid;place-items:center;width:44px;height:44px;border:1px solid #777;border-radius:8px;background:#303849;color:#fff;font-size:22px;list-style:none";
  menu.append(toggle);
@@ -574,10 +589,10 @@ loadButton.addEventListener("click",async()=>{
   if(!response.ok)throw Error(payload.error||"AI-palvelinvirhe ("+response.status+")");
   if(!payload.analysis)throw Error("Analyysiteksti puuttuu");
   const generatedAt=payload.generated_at||new Date().toISOString();
-  const {data:updated,error}=await db.from("ai_research_reports").update({analysis:payload.analysis,generated_at:generatedAt,live_data:false}).eq("id",report.id).eq("user_id",session.user.id).select("id");
+  const {data:updated,error}=await db.from("ai_research_reports").update({analysis:payload.analysis,analysis_snapshot:createAnalysisSnapshot(payload),generated_at:generatedAt,live_data:false}).eq("id",report.id).eq("user_id",session.user.id).select("id");
   if(error)throw error;
   if(!updated?.length){renderAnalysis(payload.analysis);analysisTitle.textContent="Uusi analyysi (tallennus epäonnistui): "+report.query;showAnalysis();throw Error("Uusi analyysi näkyy sivulla mutta ei tallentunut. Älä sulje sivua ennen tekstin kopiointia.");}
-  report.analysis=payload.analysis;report.generated_at=generatedAt;
+  report.analysis=payload.analysis;report.analysis_snapshot=createAnalysisSnapshot(payload);report.generated_at=generatedAt;
   open.textContent=report.query+" · "+new Date(generatedAt).toLocaleString("fi-FI");
   renderAnalysis(payload.analysis,payload);renderDataQuality(payload);renderAnalystSources(payload);renderFinancialDrivers(payload);status.textContent="Päivitetty analyysi · "+new Date(generatedAt).toLocaleString("fi-FI")+" · "+describeDataQuality(payload);
   analysisTitle.textContent="Analyysi: "+report.query;showAnalysis();
@@ -616,7 +631,7 @@ panel.querySelector("form").addEventListener("submit",async e=>{
   status.textContent="Analyysi valmis · "+new Date(payload.generated_at).toLocaleString("fi-FI")+" · "+describeDataQuality(payload);
   renderAnalysis(payload.analysis||"Analyysiteksti puuttuu.",payload);renderDataQuality(payload);renderAnalystSources(payload);renderFinancialDrivers(payload);
   if(payload.analysis){analysisTitle.textContent="Analyysi: "+query;showAnalysis()}
-  if(payload.analysis){currentReport={query,analysis:payload.analysis,generated_at:payload.generated_at};saveButton.disabled=false}
+  if(payload.analysis){currentReport={query,analysis:payload.analysis,analysis_snapshot:createAnalysisSnapshot(payload),generated_at:payload.generated_at};saveButton.disabled=false}
  }catch(err){status.textContent=err.name==="AbortError"?"Pyyntö aikakatkaistiin.":("Analyysi epäonnistui: "+err.message)}
  finally{button.disabled=false;button.textContent="Laadi analyysi";await refreshUsage()}
 });
