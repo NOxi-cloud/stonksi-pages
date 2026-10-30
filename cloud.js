@@ -49,7 +49,27 @@ function overlay(tasks,queue){const map=new Map(tasks.map(t=>[t.id,t]));for(cons
 async function flushQueue(){if(flushing||!user||!ready||!navigator.onLine)return;flushing=true;syncError=null;syncIndicator();const uid=user.id;try{while(user?.id===uid&&navigator.onLine){const q=pending(uid);if(!q.length)break;const c=q[0];const result=c.action==='delete'?await supabase.from('tasks').delete().eq('id',c.id).eq('user_id',uid):await supabase.from('tasks').upsert({...toRow(c.task),user_id:uid});if(result.error)throw result.error;const latest=pending(uid);if(latest.find(x=>x.id===c.id)?.stamp===c.stamp){localStorage.setItem(queueKey(uid),JSON.stringify(latest.filter(x=>x.id!==c.id)));}}if(user?.id===uid)message(pending(uid).length?'Muutoksia odottaa synkronointia.':'Tehtävät synkronoitu pilveen.');}catch(e){if(user?.id===uid){syncError=e.message;message('Synkronointi epäonnistui, muutokset odottavat: '+e.message);}}finally{flushing=false;syncIndicator();}}
 window.addEventListener('online',()=>{syncIndicator();flushQueue();});window.addEventListener('offline',syncIndicator);window.addEventListener('focus',()=>{syncIndicator();flushQueue();});document.addEventListener('visibilitychange',()=>{if(!document.hidden){syncIndicator();flushQueue();}});
 
-function setIndicator(state,label){const el=document.getElementById("sync-indicator"),text=document.getElementById("sync-label");if(el)el.dataset.state=state;if(text)text.textContent=label;}
+function setIndicator(state,label){
+ const el=document.getElementById("sync-indicator"),text=document.getElementById("sync-label");
+ if(el)el.dataset.state=state;
+ if(text)text.textContent=label;
+ const sidebar=document.getElementById("sidebar-sync-status");
+ if(!sidebar)return;
+ sidebar.dataset.state=state;
+ const title=document.getElementById("sidebar-sync-title"),detail=document.getElementById("sidebar-sync-detail");
+ const descriptions={
+  connecting:["Yhdistetään…","Tarkistetaan pilviyhteyttä"],
+  synced:["Pilviyhteys toimii","Tiedot synkronoitu"],
+  syncing:["Synkronoidaan…","Siirretään muutoksia pilveen"],
+  pending:["Synkronointi odottaa",label],
+  error:["Synkronointivirhe","Tarkista yhteys ja asetukset"],
+  offline:["Ei verkkoyhteyttä","Muutokset odottavat verkkoa"],
+  local:["Paikallinen tila","Kirjaudu sisään synkronoidaksesi"]
+ };
+ const info=descriptions[state]||["Yhteyden tila",label];
+ if(title)title.textContent=info[0];
+ if(detail)detail.textContent=info[1];
+}
 function syncIndicator(){
  if(!navigator.onLine){setIndicator("offline","Offline");return;}
  if(!user){setIndicator("local","Paikallinen tila");return;}
