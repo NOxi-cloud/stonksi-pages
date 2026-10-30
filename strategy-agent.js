@@ -3,7 +3,8 @@ import {getCachedDaily,storeCachedDaily} from "./stock-history-cache.mjs";
 import {positionRisk,paperMetrics,dayTradeDataGate} from "./strategy-engine.mjs";
 const root=document.getElementById("strategy-agent-workspace"),db=window.agentSupabaseClient;
 const e=(tag,label,cls)=>{const x=document.createElement(tag);if(label!==undefined)x.textContent=label;if(cls)x.className=cls;return x};
-const input=(label,value)=>{const l=e("label",label),x=e("input");x.value=value;x.type="number";x.min="0";x.step="any";l.append(x);return {l,x}};
+const input=(label,value)=>{const l=e("label",undefined,"strategy-field"),caption=e("span",label),x=e("input");x.value=value;x.type="number";x.min="0";x.step="any";l.append(caption,x);return {l,x}};
+const normalizeTicker=(raw)=>{const s=String(raw||"").trim().toUpperCase();const names={"NOKIA":"NOKIA.HE","METSO":"METSO.HE","WRT1V":"WRT1V.HE","KESKOB":"KESKOB.HE","VALMT":"VALMT.HE","NESTE":"NESTE.HE"};return names[s]||s};
 let uid=null,records=[],settings={day:1000,long:5000,risk:.5,maxDayLoss:25};
 const key=()=>uid?"stonksi-strategy-sandbox-"+uid:null;
 const save=()=>{if(uid)sessionStorage.setItem(key(),JSON.stringify({records,settings}))};
@@ -16,7 +17,7 @@ function render(){
  day.append(e("h2","Päiväkauppa · harjoittelu"),e("p",dayTradeDataGate({}).reason,"muted"));
  long.append(e("h2","Pitkäaikainen sijoittaminen"),e("p","Tallenna sijoitusteesi ja sen kumoutumisehdot. Päiväkaupan tappio ei koskaan siirry automaattisesti pitkäaikaiseksi sijoitukseksi.","muted"));
  const a=input("Päiväkaupan pääoma €",settings.day),b=input("Pitkän salkun pääoma €",settings.long),r=input("Riski % / päiväkauppa",settings.risk),limit=input("Päivän tappioraja €",settings.maxDayLoss);
- for(const c of [a,r,limit])day.append(c.l);long.append(b.l);
+ const dayLimits=e("div",undefined,"strategy-limits");for(const c of [a,r,limit])dayLimits.append(c.l);day.append(dayLimits);long.append(b.l);
  const saveBtn=e("button","Tallenna strategioiden rajat","secondary-btn"),info=e("p","","muted");saveBtn.type="button";day.append(saveBtn,info);
  saveBtn.onclick=()=>{const values=[a,b,r,limit].map(t=>Number(t.x.value));if(values.some(n=>!Number.isFinite(n)||n<=0)||values[2]>2||values[0]>1e7||values[1]>1e7){info.textContent="Virheelliset arvot. Riski korkeintaan 2 %.";return}settings={day:values[0],long:values[1],risk:values[2],maxDayLoss:values[3]};save();info.textContent="Tallennettu selainistuntoon.";draw()};
  const riskForm=e("form",undefined,"strategy-form"),entry=input("Ostohinta €",10),stop=input("Stop €",9.6),fee=input("Kulut / osake €",.01),result=e("p","Position koko on laskennallinen, stop ei takaa toteutushintaa.","muted");
@@ -27,22 +28,22 @@ function render(){
  const swingTicker=e("input");swingTicker.placeholder="Ticker, esim. NOKIA.HE";swingTicker.maxLength=20;
  const swingRun=e("button","Tarkista swing-ehdokas","secondary-btn");swingRun.type="button";
  const swingOutput=e("div");swing.append(swingTicker,swingRun,swingOutput);
- swingRun.onclick=async()=>{const symbol=swingTicker.value.trim().toUpperCase();if(!/^[A-Z0-9^][A-Z0-9.^_-]{0,19}$/.test(symbol)){swingOutput.textContent="Tarkista osaketunnus.";return}
-  swingRun.disabled=true;swingOutput.textContent="Haetaan yhden vuoden hintahistoriaa…";
+ swingRun.onclick=async()=>{const symbol=normalizeTicker(swingTicker.value);if(!/^[A-Z0-9^][A-Z0-9.^_-]{0,19}$/.test(symbol)){swingOutput.textContent="Tarkista osaketunnus.";return}
+  swingTicker.value=symbol;swingRun.disabled=true;swingOutput.textContent="Haetaan yhden vuoden hintahistoriaa: "+symbol+"…";
   const expectedUser=uid;
   try{const {data:{session}}=await db.auth.getSession();if(!session?.access_token||session.user.id!==expectedUser)throw Error("Kirjaudu sisään");
    let data=getCachedDaily(expectedUser,symbol);
    if(!data){
     const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),12000);
     let response;try{response=await fetch("https://ywrnmfozoyniftkzcopt.supabase.co/functions/v1/stock-quotes",{method:"POST",signal:ctrl.signal,headers:{Authorization:"Bearer "+session.access_token,apikey:"sb_publishable_7wcqNJq1vLpbM_RgkoEyQQ_2VLq9cqE","Content-Type":"application/json"},body:JSON.stringify({action:"history",symbol,period:"1y"})})}finally{clearTimeout(timer)}
-    const payload=await response.json();if(!response.ok)throw Error(payload.error||"Kurssihaku epäonnistui");
+    const payload=await response.json();if(!response.ok)throw Error((payload.error||"Kurssihaku epäonnistui")+(response.status===429?" (palvelun pyyntöraja täyttyi)":response.status===502?" (ulkoinen tietolähde ei vastaa)": ""));
     const {data:{session:check}}=await db.auth.getSession();if(check?.user?.id!==expectedUser)return;
     storeCachedDaily(expectedUser,symbol,payload);data=payload;
    }
    if(uid!==expectedUser)return;const v=evaluateSwingCandidate(data,Date.now());swingOutput.replaceChildren();
    swingOutput.append(e("h3",v.status==="watch_candidate"?"Seurantaehdokas":v.status==="no_action"?"Ei toimenpidettä":"Ei riittävästi tietoa"));
    for(const line of [v.reason,v.marketAt&&"Markkinahavainto: "+v.marketAt,v.receivedAt&&"Tieto käsitelty: "+v.receivedAt,v.close&&"Viimeisin havaintohinta: "+v.close,v.volumeRatio&&"Vaihto suhteessa 20 päivään: "+v.volumeRatio.toFixed(2)+"×",v.nextStep,v.disclaimer].filter(Boolean))swingOutput.append(e("p",String(line),"muted"));
-  }catch(err){if(uid===expectedUser)swingOutput.textContent="Tarkistus ei onnistunut: "+err.message}finally{swingRun.disabled=false}
+  }catch(err){if(uid===expectedUser)swingOutput.textContent="Tarkistus ei onnistunut ("+symbol+"): "+err.message+". Tarkista pörssitunnus ja yritä myöhemmin uudelleen."}finally{swingRun.disabled=false}
  };
  const form=e("form",undefined,"strategy-form"),ticker=e("input"),thesis=e("textarea"),invalidates=e("textarea"),thesisList=e("div");
  ticker.placeholder="Yhtiön ticker, esim. NOKIA.HE";ticker.maxLength=20;thesis.placeholder="Miksi omistaisin yhtiötä?";invalidates.placeholder="Mikä muutos kumoaa sijoitusteesin?";for(const t of [thesis,invalidates]){t.maxLength=1000;t.required=true}ticker.required=true;
