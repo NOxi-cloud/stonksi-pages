@@ -390,6 +390,13 @@ function renderDataQuality(payload){
     }table.append(tr);
    }
    detail.append(table);
+   if(Number.isFinite(fy.market_implied_p_fcf)&&Number.isFinite(fy.base_assumed_p_fcf)){
+    const multiples=document.createElement("p");multiples.className="muted";
+    multiples.textContent="Havaintokurssin implisiittinen P/FCF "+
+     fy.market_implied_p_fcf.toLocaleString("fi-FI")+"× · Base-mallioletus "+
+     fy.base_assumed_p_fcf.toLocaleString("fi-FI")+"×. Prosentuaalinen ero ei ole ennustettu kurssiliike.";
+    detail.append(multiples);
+   }
    const caveat=document.createElement("p");caveat.className="muted";
    caveat.textContent=String(fy.assumptions||"")+" "+String(fy.caveat||"");
    detail.append(caveat);
