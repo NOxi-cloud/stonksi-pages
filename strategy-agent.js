@@ -188,6 +188,36 @@ function render(){
       e("p","Trendijaksot: "+["rising","sideways","falling"].map(k=>{const r=test.regimes[k];return ({"rising":"Nouseva","sideways":"Sivuttainen","falling":"Laskeva"}[k])+": "+r.candidates+"/"+r.observations+" ehdokasta, "+fmtPct(r.mean)}).join(" · "),"muted"),
       e("p",test.disclaimer,"muted")
      );
+     const sampleText=test.sampleQuality.independentCandidates<5
+      ?"Erittäin pieni riippumaton otos – tuloksista ei voi päätellä strategian toimivuutta."
+      :test.sampleQuality.independentCandidates<20
+       ?"Pieni riippumaton otos – tulokset ovat epävarmoja."
+       :"Otos on suurempi, mutta riippumaton vahvistus ja eri markkinajaksojen testaus puuttuvat.";
+     historyOut.append(e("p","Otoksen laatu: "+sampleText,"muted"));
+     historyOut.append(e("h3","Vuosikohtainen vertailu"));
+     for(const [year,item] of Object.entries(test.byYear)){
+      historyOut.append(e("p",year+" · havaintoja "+item.observations+" · swing-ehdokkaita "+item.candidates+
+       " · swing-muutos "+fmtPct(item.mean)+" · RSI/MACD "+item.confirmed+" ehdokasta, "+fmtPct(item.confirmedMean)+
+       " · kaikkien päivien keskiarvo "+fmtPct(item.baselineMean),"muted"));
+     }
+     historyOut.append(e("h3","Kaupankäyntikulujen herkkyys (esimerkki)"));
+     const costHelp=e("p","Valitse havainnollinen edestakaisten kulujen prosenttivähennys. Tämä ei mallinna todellisia toteutuksia, spreadia tai liukumaa.","muted");
+     const costSelect=e("select");costSelect.setAttribute("aria-label","Oletetut kokonaiskulut");
+     for(const scenario of test.costScenarios){
+      const option=e("option",scenario.costPct.toLocaleString("fi-FI")+" % kokonaiskulut");option.value=String(scenario.costPct);costSelect.append(option);
+     }
+     const costResult=e("p",undefined,"muted");
+     const updateCost=()=>{
+      const scenario=test.costScenarios.find(x=>x.costPct===Number(costSelect.value));
+      if(!scenario)return;
+      costResult.textContent="Ehdokkaiden keskim. hintamuutos kuluvähennyksen jälkeen "+
+       fmtPct(scenario.meanAfterCost)+" · erillinen ei-päällekkäinen otos "+
+       fmtPct(scenario.independentMeanAfterCost)+" · positiivisia "+
+       scenario.positiveAfterCost+"/"+scenario.candidates+". Ei simuloitu kaupankäyntituotto.";
+     };
+     costSelect.addEventListener("change",updateCost);
+     historyOut.append(costHelp,costSelect,costResult);
+     updateCost();
      const saveTest=e("button","Tallenna tämä testi Supabaseen","secondary-btn");
      saveTest.type="button";historyOut.append(saveTest);
      saveTest.onclick=async()=>{
