@@ -1,0 +1,26 @@
+name: Stonksi data-parser tests
+on:
+  push:
+    paths:
+      - 'piksu-tips-parser.mjs'
+      - 'esef-facts.mjs'
+      - 'tests/**'
+      - '.github/workflows/data-parser-tests.yml'
+  pull_request:
+    paths:
+      - 'piksu-tips-parser.mjs'
+      - 'esef-facts.mjs'
+      - 'tests/**'
+      - '.github/workflows/data-parser-tests.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run offline deterministic tests
+        run: node --test tests/*.test.mjs
