@@ -35,6 +35,36 @@ if(root&&db){
  };
  const currentUser=async()=>{const {data:{session}}=await db.auth.getSession();return session?.access_token&&session?.user?.id?session:null};
 
+ let financialRenderId=0;
+ async function loadStoredFinancials(ticker,host){
+  const id=++financialRenderId,session=await currentUser();
+  host.replaceChildren();
+  if(!session){host.append(el("p","Kirjaudu sisään nähdäksesi tallennetut talousluvut.","muted"));return}
+  host.append(el("p","Ladataan aiemmin poimittuja lukuja…","muted"));
+  const {data,error}=await db.from("company_financial_facts")
+   .select("period_end,report_language,extracted_at,source_sha256,evidence")
+   .eq("user_id",session.user.id).eq("ticker",ticker)
+   .order("period_end",{ascending:false}).limit(12);
+  const active=await currentUser();
+  if(id!==financialRenderId||active?.user?.id!==session.user.id||!host.isConnected)return;
+  host.replaceChildren();
+  if(error){host.append(el("p","Tallennettuja talouslukuja ei voitu lukea.","muted"));return}
+  if(!data?.length){host.append(el("p","Ei vielä tallennettuja XBRL-taloustietoja. Poimi luvut valitun raportin painikkeesta.","muted"));return}
+  for(const item of data){
+   const panel=el("article",undefined,"company-source-financial-record");
+   panel.append(el("strong","Tilikausi "+item.period_end+" · "+String(item.report_language||"").toUpperCase()));
+   panel.append(el("small","Poimittu "+labelDate(item.extracted_at)+" · SHA-256: "+String(item.source_sha256||"").slice(0,12)+"…","muted"));
+   const metrics=Array.isArray(item.evidence?.metrics)?item.evidence.metrics:[];
+   for(const metric of metrics.slice(0,8)){
+    if(typeof metric?.key!=="string"||!Number.isFinite(metric.value))continue;
+    addRow(panel,inspectLabels[metric.key]||metric.key,
+      (metric.value/1e6).toLocaleString("fi-FI",{maximumFractionDigits:2})+" milj. €");
+   }
+   panel.append(el("small","Koneellisesti poimitut havainnot. Ei vielä hyväksytty osakekohtaisen tavoitehinnan laskentaan.","muted"));
+   host.append(panel);
+  }
+ }
+
  const inspectLabels={revenue:"Liikevaihto",operating_profit:"Liikevoitto",profit_loss:"Tilikauden tulos",
   assets:"Varat",equity:"Oma pääoma",liabilities:"Velat",operating_cash_flow:"Liiketoiminnan rahavirta",
   capital_expenditure:"Investointien rahavirta"};
@@ -66,6 +96,7 @@ if(root&&db){
     addRow(output,inspectLabels[item.key]||item.key,formatted(item.value));
    }
    output.append(el("p","Luvut poimittu XBRL-JSON-muodosta ja tallennettu. LEI-/osakelaji-, osakemäärä- ja tilintarkastusvarmistukset ovat edelleen kesken. Ei Stonksin tavoitehintaa.","muted"));
+   const savedHost=result.querySelector(".company-source-financial-results");if(savedHost)void loadStoredFinancials(ticker,savedHost);
   }catch(err){output.replaceChildren();output.append(el("p",err?.name==="AbortError"?"Raporttihaku aikakatkaistiin.":"Talouslukujen poiminta epäonnistui: "+String(err?.message||"Tuntematon virhe"),"muted"))}
   finally{clearTimeout(timer);button.disabled=false}
  }
@@ -120,10 +151,15 @@ if(root&&db){
   card.append(esefSection);
   card.append(el("p","Tässä vaiheessa ei vielä lasketa DCF-, EV/EBIT- tai P/FCF-arvostuksia ilman varmennettuja tilinpäätöslukuja ja osakemäärää.","muted"));
   result.append(card);
+  const existing=el("section",undefined,"company-source-financial-section");
+  existing.append(el("h4","Tallennetut IFRS-taloustiedot"));
+  const existingRows=el("div",undefined,"company-source-financial-results");
+  existing.append(existingRows);result.append(existing);
+  if(typeof payload.ticker==="string"&&/^[A-Z0-9^._-]{1,20}\.HE$/.test(payload.ticker))void loadStoredFinancials(payload.ticker,existingRows);
  }
  async function readSaved(){
   const session=await currentUser(),id=++requestId;
-  if(!session){owner=null;history=[];savedRows.replaceChildren();result.replaceChildren();status.textContent="Kirjaudu sisään hakeaksesi lähteitä.";return}
+  if(!session){financialRenderId++;owner=null;history=[];savedRows.replaceChildren();result.replaceChildren();status.textContent="Kirjaudu sisään hakeaksesi lähteitä.";return}
   owner=session.user.id;
   const {data,error}=await db.from("company_source_snapshots").select("ticker,company_name,checked_at,snapshot").eq("user_id",owner).order("checked_at",{ascending:false}).limit(15);
   if(id!==requestId||owner!==session.user.id)return;
@@ -165,5 +201,5 @@ if(root&&db){
  form.addEventListener("submit",event=>{event.preventDefault();void search(false)});
  refresh.addEventListener("click",()=>{void search(true)});
  void readSaved();
- db.auth.onAuthStateChange(()=>{requestId++;owner=null;history=[];savedRows.replaceChildren();result.replaceChildren();status.textContent="Tarkistetaan kirjautumistila…";setTimeout(()=>{void readSaved()},0)});
+ db.auth.onAuthStateChange(()=>{requestId++;financialRenderId++;owner=null;history=[];savedRows.replaceChildren();result.replaceChildren();status.textContent="Tarkistetaan kirjautumistila…";setTimeout(()=>{void readSaved()},0)});
 }
