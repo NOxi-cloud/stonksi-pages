@@ -104,6 +104,10 @@ function render(){
   const valid=ranked.filter(x=>x.comparable);
   const summary=e("p","Vertailukelpoisia "+valid.length+"/"+ranked.length+" · järjestys: täyttyneet ehdot, suurin puuttuva prosenttiosuus, puuttuvien prosenttien summa.","muted");
   compareRows.append(summary);
+  const history=readSwingProgress(uid);
+  const at=Date.now();
+  const snapshots=ranked.map(x=>createSwingSnapshot(x,at)).filter(Boolean);
+  const byTicker=new Map(snapshots.map(x=>[x.symbol,x]));
   const cards=e("div",undefined,"swing-compare-grid");
   for(const item of ranked){
    const card=e("article",undefined,"swing-compare-card");
@@ -111,6 +115,15 @@ function render(){
    if(!item.comparable){card.append(e("p","Ei vertailukelpoista dataa","muted"),e("small",item.error||item.result?.reason||"Tietoja puuttuu.","muted"));cards.append(card);continue}
    const info=e("p",(item.result.status==="watch_candidate"?"Seurantaehdokas":"Ei toimenpidettä")+" · "+item.passed+"/3 ehtoa");
    card.append(info);
+   const snapshot=byTicker.get(item.symbol);
+   if(snapshot){
+    const change=compareSwingProgress(snapshot,history);
+    const line=e("p",change.label,"swing-progress-label");
+    line.dataset.state=change.state;card.append(line);
+    if(change.previous&&change.state!=="same"&&change.state!=="older"){
+     card.append(e("small","Edellinen havainto "+new Date(change.previous.marketAt).toLocaleDateString("fi-FI")+" · "+change.previous.passed+"/3 ehtoa","muted"));
+    }
+   }
    const details=e("div",undefined,"swing-compare-distances");
    const rules=item.result.rules;
    for(const [label,ok,need] of [["SMA200",rules.aboveSma200,item.missing.sma200],["20 pv huippu",rules.breakout20,item.missing.breakout20],["Volyymi",rules.volumeAboveAverage,item.missing.volume]]){
@@ -128,7 +141,7 @@ function render(){
   if(compareBusy)return;
   const chosen=availableSymbols.filter(x=>selectedTickers.has(x.symbol)).slice(0,MAX_SWING_COMPARE);
   if(!chosen.length){compareStatus.textContent="Valitse vähintään yksi osake.";return}
-  compareBusy=true;compareRun.disabled=true;selectionRefresh.disabled=true;compareRows.replaceChildren();
+  compareBusy=true;compareRun.disabled=true;selectionRefresh.disabled=true;progressSave.disabled=true;latestComparison=[];latestComparisonUser=null;compareRows.replaceChildren();
   const generation=++compareGeneration,expectedUser=uid,entries=[];
   try{
    const {data:{session}}=await db.auth.getSession();
@@ -156,13 +169,17 @@ function render(){
     }catch(err){entries.push({...item,error:err.name==="AbortError"?"Kurssihaun aikakatkaisu":err.message})}
    }
    if(uid===expectedUser&&generation===compareGeneration){
+    lastComparedEntries=entries;
+    latestComparison=compareSwingCandidates(entries).map(x=>createSwingSnapshot(x)).filter(Boolean);
+    latestComparisonUser=expectedUser;
+    progressSave.disabled=!latestComparison.length;
     showComparison(entries);
     compareStatus.textContent="Vertailtu "+entries.length+"/"+chosen.length+" osaketta. Uudet haut tehdään vain käyttäjän pyynnöstä.";
    }
   }catch(err){if(uid===expectedUser)compareStatus.textContent="Vertailu epäonnistui: "+err.message}
   finally{compareBusy=false;compareRun.disabled=false;selectionRefresh.disabled=false;}
  });
- compare.append(compareTitle,compareHelp,selectionRefresh,selectionHelp,selection,compareRun,compareStatus,compareRows);
+ compare.append(compareTitle,compareHelp,selectionRefresh,selectionHelp,selection,compareRun,progressSave,progressHistoryButton,compareStatus,compareRows,progressHistory);
  swing.append(compare);
  makeChoices();
 
