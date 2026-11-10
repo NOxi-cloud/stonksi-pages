@@ -45,6 +45,27 @@ export function backtestSwingHistory(raw,maxCases=550){
  }
  const confirmedMean=average(confirmed),confirmedPositive=confirmed.filter(r=>r.changePct>0).length;
  const confirmedIndependentMean=average(independentConfirmed);
+ // Cost sensitivity applies an illustrative round-trip percentage deduction to close-to-close price changes.
+ // It is NOT an executable P/L estimate; fills, FX, taxes, spread, corporate actions and dividends are unmodelled.
+ const costScenarios=[0,0.25,0.5,1].map(costPct=>({
+  costPct, candidates:candidates.length,independentCount:independent.length,
+  meanAfterCost:mean===null?null:mean-costPct,
+  independentMeanAfterCost:independentMean===null?null:independentMean-costPct,
+  positiveAfterCost:candidates.filter(row=>row.changePct>costPct).length
+ }));
+ const byYear=Object.fromEntries([...new Set(results.map(row=>row.day.slice(0,4)))].sort().map(year=>{
+  const observations=results.filter(row=>row.day.startsWith(year)),signals=observations.filter(row=>row.signal==="watch_candidate"),
+   confirmedSignals=signals.filter(row=>row.technicalConfirmed);
+  return [year,{observations:observations.length,candidates:signals.length,mean:average(signals),
+   confirmed:confirmedSignals.length,confirmedMean:average(confirmedSignals),
+   baselineMean:average(observations)}];
+ }));
+ const sampleQuality={
+  independentCandidates:independent.length,independentConfirmed:independentConfirmed.length,
+  candidateSample:independent.length>=20?"limited":independent.length>=5?"weak":"insufficient",
+  confirmedSample:independentConfirmed.length>=20?"limited":independentConfirmed.length>=5?"weak":"insufficient",
+  caveats:["Aikasarjan jaksot voivat olla päällekkäisiä.","Viivästynyt data ja hintakorjaukset voivat muuttaa havaintoja.","RSI/MACD-suodatin on valittu ilman riippumatonta validointia."]
+ };
  const confirmation={version:CONFIRMATION_VERSION,eligible:candidates.length,confirmed:confirmed.length,
    positive:confirmedPositive,mean:confirmedMean,
    rejected:candidates.length-confirmed.length,independentCount:independentConfirmed.length,
@@ -54,7 +75,7 @@ export function backtestSwingHistory(raw,maxCases=550){
    const group=results.filter(r=>r.regime===regime),selected=group.filter(r=>r.signal==="watch_candidate");
    return [regime,{observations:group.length,candidates:selected.length,mean:average(selected),baseline:average(group)}];
  }));
- return {rows:results.map(({index,...rest})=>rest),candidates:candidates.length,mean,baselineMean,positiveCount:positive,independentCount:independent.length,independentMean,independentPositive,regimes,confirmation,
+ return {rows:results.map(({index,...rest})=>rest),candidates:candidates.length,mean,baselineMean,positiveCount:positive,independentCount:independent.length,independentMean,independentPositive,regimes,confirmation,costScenarios,byYear,sampleQuality,
   relativeDifference:mean!==null&&baselineMean!==null?mean-baselineMean:null,
-  disclaimer:"Kuvaileva, jälkikäteen laskettu 5 havaintopäivän kurssivertailu. Kaikki jaksot voivat olla päällekkäisiä. Erillinen aikajärjestyksessä valittu, ei-päällekkäinen ehdokasotos on myös pieni ja valikoitunut. Markkinatilanne luokitellaan SMA50:n viiden havaintopäivän muutoksella (raja ±0,75 %), ei laajan markkinaindeksin perusteella. RSI/MACD-rajat ovat tutkimusolettamia, eivät optimoituja tai todennettuja. Vahvistusryhmä on swing-ehdokkaiden osajoukko, ei riippumaton vertailuryhmä. Ei kauppojen toteutushintoja, kustannuksia, osinkoja tai riskikorjattua tuottoa. Tulokset eivät ennusta tulevaa."};
+  disclaimer:"Kuvaileva, jälkikäteen laskettu 5 havaintopäivän kurssivertailu. Kaikki jaksot voivat olla päällekkäisiä. Erillinen aikajärjestyksessä valittu, ei-päällekkäinen ehdokasotos on myös pieni ja valikoitunut. Markkinatilanne luokitellaan SMA50:n viiden havaintopäivän muutoksella (raja ±0,75 %), ei laajan markkinaindeksin perusteella. RSI/MACD-rajat ovat tutkimusolettamia, eivät optimoituja tai todennettuja. Vahvistusryhmä on swing-ehdokkaiden osajoukko, ei riippumaton vertailuryhmä. Kustannusherkkyys on prosenttivähennys, ei todellinen kaupankäyntituotto. Toteutushintoja, osinkoja, veroja, valuuttakuluja tai riskikorjattua tuottoa ei lasketa. Tulokset eivät ennusta tulevaa."};
 }
