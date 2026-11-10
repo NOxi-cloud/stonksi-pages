@@ -36,3 +36,10 @@ Päivitetty: 2026-11-10. Lähteet: GitHub-main, Supabase-tietokanta ja aiemmat S
 Tärpit-näkymän käytännön testaus → ESEF-JSON:n poiminnan käytännön testaus ja varmennus → EUR-arvostuksen auditointi → hintahistoria ja signaalit → testit ja tietoturvakorjaukset → siivous ja viimeistely.
 
 Huom: kaikki 'keskeneräinen'-merkinnät tarkoittavat avoimia tehtäviä, eivät todettua toimintahäiriötä. Edistymisestä voi pitää ajantasaista listaa muuttamalla tätä tiedostoa version mukana.
+
+### Kehityskierros 10.11.2026
+- [x] Käyttötilastojen `tips`- ja `strategy`-näkymien sallinta Supabasen kirjauksessa ja käyttöliittymässä.
+- [x] Piksun ja IFRS-lukujen jäsentimille offline-regressiotestit, mukana automaattinen GitHub Actions -ajo.
+- [x] Swing-vertailutestin liukulukutoleranssin korjaus; testiajo vihreä.
+- [x] Talteen otettujen XBRL-havaintojen selaus Osakkeet-osiossa ilman uutta raporttilatausta.
+- [ ] Piksun ja Metson XBRL:n todelliset kirjautuneen käyttäjän hakutestit: tietokannassa ei vielä kirjattuja onnistumisia.
