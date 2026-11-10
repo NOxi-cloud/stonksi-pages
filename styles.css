@@ -261,3 +261,10 @@
 #strategy-agent-workspace .swing-compare-card>small{display:block;margin-top:9px}
 #strategy-agent-workspace .swing-compare-distances{display:flex;flex-direction:column;gap:7px;font-size:12px;color:#c8c4dc}
 @media(max-width:600px){#strategy-agent-workspace .swing-compare-panel{padding:12px}#strategy-agent-workspace .swing-compare-picks{grid-template-columns:minmax(0,1fr)}#strategy-agent-workspace .swing-compare-panel>button{max-width:100%}}
+
+/* Saved XBRL observations (source evidence, not model targets). */
+.company-source-financial-section{margin:20px 0 10px;padding:12px 0;border-top:1px solid var(--border);min-width:0}
+.company-source-financial-section h4{margin:5px 0 10px}
+.company-source-financial-record{display:flex;flex-direction:column;gap:7px;border:1px solid var(--border);background:#141a27;border-radius:11px;padding:14px;margin:10px 0;overflow-wrap:anywhere}
+.company-source-financial-record>small{display:block;color:var(--muted);line-height:1.5}
+.company-source-financial-record .company-source-field{padding:7px 0;border-top:1px solid #2e3546}
