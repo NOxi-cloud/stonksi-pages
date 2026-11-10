@@ -55,6 +55,7 @@ function render(){
     const price=n=>fmt(n,3)+" "+unit;
     const gap=(value,level,ok)=>ok
      ?"Ehto täyttyy · ylitys "+fmt(100*(value/level-1))+" %"
+     :value===level?"Täsmälleen rajalla · ylitys vaaditaan"
      :"Puuttuu "+fmt(Math.max(0,100*(level/value-1)))+" % (+ "+price(Math.max(0,level-value))+")";
     const rows=[
      ["200 päivän trendi",v.rules.aboveSma200,"Kurssi "+price(v.close)+" · SMA200 "+price(v.sma200),gap(v.close,v.sma200,v.rules.aboveSma200)],
