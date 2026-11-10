@@ -1,5 +1,6 @@
 import {evaluateSwingCandidate,swingRuleDistances} from "./strategy-swing.mjs";
 import {MAX_SWING_COMPARE,pickWatchlistSymbols,compareSwingCandidates} from "./strategy-swing-compare.mjs";
+import {createSwingSnapshot,readSwingProgress,saveSwingProgress,compareSwingProgress} from "./strategy-swing-progress.mjs";
 import {swingRiskLevels} from "./strategy-risk-levels.mjs";
 import {backtestSwingHistory} from "./strategy-backtest.mjs?v=quality2";
 import {getCachedDaily,storeCachedDaily} from "./stock-history-cache.mjs";
@@ -43,6 +44,39 @@ function render(){
  const compareRun=e("button","Vertaa valitut osakkeet","secondary-btn");compareRun.type="button";
  const compareStatus=e("p","","muted");compareStatus.setAttribute("role","status");
  const compareRows=e("div",undefined,"swing-compare-results");
+ const progressSave=e("button","Tallenna nykyinen tarkistus","secondary-btn");progressSave.type="button";progressSave.disabled=true;
+ const progressHistoryButton=e("button","Näytä tallennettu seuranta","secondary-btn");progressHistoryButton.type="button";
+ const progressHistory=e("section",undefined,"swing-compare-history");progressHistory.hidden=true;
+ let latestComparison=[],latestComparisonUser=null,lastComparedEntries=[];
+ const marketDate=iso=>new Date(iso).toLocaleDateString("fi-FI",{timeZone:"Europe/Helsinki"});
+ const showProgressHistory=()=>{
+  progressHistory.replaceChildren();
+  const data=readSwingProgress(uid);
+  progressHistory.append(e("h4","Tallennetut swing-tarkistukset"),e("p","Tallennettu vain tämän laitteen selaimeen, kirjautuneelle käyttäjälle. Ei synkronoidu muihin laitteisiin.","muted"));
+  if(!data.length){progressHistory.append(e("p","Ei tallennettuja tarkistuksia.","muted"));return}
+  const list=e("div",undefined,"swing-compare-grid");
+  for(const item of [...data].reverse().slice(0,20)){
+   const box=e("article",undefined,"swing-compare-card");
+   box.append(e("strong",item.name+" · "+item.symbol),
+    e("p",item.passed+"/3 ehtoa · havainto "+marketDate(item.marketAt)),
+    e("small","SMA200 "+item.missing.sma200.toLocaleString("fi-FI",{maximumFractionDigits:2})+" % · 20 pv "+item.missing.breakout20.toLocaleString("fi-FI",{maximumFractionDigits:2})+" % · volyymi "+item.missing.volume.toLocaleString("fi-FI",{maximumFractionDigits:2})+" %","muted"));
+   list.append(box);
+  }
+  progressHistory.append(list);
+ };
+ progressHistoryButton.addEventListener("click",()=>{
+  if(!uid){compareStatus.textContent="Kirjaudu sisään.";return}
+  progressHistory.hidden=!progressHistory.hidden;
+  progressHistoryButton.textContent=progressHistory.hidden?"Näytä tallennettu seuranta":"Piilota tallennettu seuranta";
+  if(!progressHistory.hidden)showProgressHistory();
+ });
+ progressSave.addEventListener("click",()=>{
+  if(compareBusy||!uid||latestComparisonUser!==uid||!latestComparison.length){compareStatus.textContent="Tee ensin oma swing-vertailu.";return}
+  const result=saveSwingProgress(uid,latestComparison);
+  compareStatus.textContent=result.error?result.error:"Tallennettu "+result.saved+" uutta havaintoa · ohitettu "+result.skipped+" jo tallennettua tai vanhaa havaintoa.";
+  if(!progressHistory.hidden)showProgressHistory();
+ });
+
  let selectedTickers=new Set(),availableSymbols=[],compareBusy=false,compareGeneration=0;
  const fmtCompare=n=>n.toLocaleString("fi-FI",{maximumFractionDigits:2,minimumFractionDigits:2});
  const makeChoices=()=>{
