@@ -1,7 +1,7 @@
 import {evaluateSwingCandidate,swingRuleDistances} from "./strategy-swing.mjs";
 import {MAX_SWING_COMPARE,pickWatchlistSymbols,compareSwingCandidates} from "./strategy-swing-compare.mjs";
 import {swingRiskLevels} from "./strategy-risk-levels.mjs";
-import {backtestSwingHistory} from "./strategy-backtest.mjs";
+import {backtestSwingHistory} from "./strategy-backtest.mjs?v=long-history1";
 import {getCachedDaily,storeCachedDaily} from "./stock-history-cache.mjs";
 import {positionRisk,paperMetrics,dayTradeDataGate} from "./strategy-engine.mjs";
 const root=document.getElementById("strategy-agent-workspace"),db=window.agentSupabaseClient;
