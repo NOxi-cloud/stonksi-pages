@@ -7,6 +7,20 @@ const marketFor=symbol=>{
  return null;
 };
 const marketParts=(ms,zone)=>{const d=new Intl.DateTimeFormat("en-CA",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(ms);const v=Object.fromEntries(d.map(x=>[x.type,x.value]));return {day:v.year+"-"+v.month+"-"+v.day,minutes:Number(v.hour)*60+Number(v.minute)};};
+// Distance from the latest completed close to each current rule threshold.
+// A rule needs a strict > comparison: touching the reference is not passing.
+export function swingRuleDistances(signal){
+ if(!signal?.rules)return null;
+ const {close,sma200,previous20High,volumeRatio}=signal;
+ if(![close,sma200,previous20High,volumeRatio].every(x=>typeof x==="number"&&Number.isFinite(x)&&x>0))return null;
+ const distance=level=>({difference:level-close,changePct:100*(level/close-1),
+  marginPct:100*(close/level-1)});
+ return {
+  sma200:distance(sma200),
+  breakout20:distance(previous20High),
+  volume:{vsAveragePct:100*(volumeRatio-1),increaseToAveragePct:100*(1/volumeRatio-1)}
+ };
+}
 export function evaluateSwingCandidate(raw,receivedAt=Date.now()){
  const history=validateHistory(raw);
  if(raw?.period!=="1y"||!history||history.length<205||history.length>360||raw.price_kind!=="unadjusted_close"||!Number.isFinite(receivedAt))return {status:"insufficient_data",reason:"Päiväkurssisarja puuttuu tai ei ole vertailukelpoinen."};
@@ -30,7 +44,7 @@ export function evaluateSwingCandidate(raw,receivedAt=Date.now()){
  const rules={aboveSma200:last.price>sma200,breakout20:last.price>high20,volumeAboveAverage:volumeRatio>1};
  const passed=Object.values(rules).filter(Boolean).length;
  const all=passed===3;
- return {status:all?"watch_candidate":"no_action",rules,passed,score:Math.round(passed/3*100),close:last.price,sma200,previous20High:high20,volumeRatio,provisional:unfinished,
+ return {status:all?"watch_candidate":"no_action",rules,passed,score:Math.round(passed/3*100),close:last.price,sma200,previous20High:high20,volumeRatio,currency:typeof raw.currency==="string"&&/^[A-Z]{3}$/.test(raw.currency)?raw.currency:"",provisional:unfinished,
   marketAt:new Date(marketAt).toISOString(),receivedAt:new Date(receivedAt).toISOString(),
   source:"Yahoo Finance (epävirallinen, mahdollisesti viivästynyt)",quoteType:"päivän viimeinen valmis havainto / ei varmistettu toteutushinta",
   brokerSpread:"ei saatavilla",executionPrice:null,
