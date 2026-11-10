@@ -42,7 +42,7 @@ export function parseTimonList(html,DOMParserClass){
  const summary=clean(document.body?.textContent||"").slice(0,450);
  const sourceUpdated=day(summary.match(/Päivitetty.{0,35}/i)?.[0]||summary.slice(0,85));
  const header=Array.from(best.table.querySelectorAll("tr")).slice(0,12).map(tr=>clean(tr.textContent)).find(line=>/Osakekurssi\s*\/\s*EUR/i.test(line))||"";
- const quoteDate=day(header.match(/Osakekurssi\/EUR.{0,38}/i)?.[0]||"");
+ const quoteDate=day(header.match(/Osakekurssi\s*\/\s*EUR.{0,38}/i)?.[0]||"");
  if(!sourceUpdated||!quoteDate||sourceUpdated<"2020-01-01"||quoteDate>sourceUpdated||
   Date.parse(sourceUpdated+"T00:00:00Z")>Date.now()+86400000)throw Error("source_dates_unverified");
  return {source_updated:sourceUpdated,quote_date:quoteDate,row_count:best.rows.length,top:best.rows.slice(0,8),rows:best.rows};
