@@ -47,7 +47,7 @@ test("matches watchlist ticker and name without arbitrary unrelated matches",()=
 });
 test("rejects source layout changes and mismatched target percentages",()=>{
  const rows=sampleRows();
- rows[1][5]="99%";
+ for(let i=1;i<=6;i++)rows[i][5]="99%";
  assert.throws(()=>parseTimonList(JSON.stringify({title:"Päivitetty 31.7.2026",rows}),FakeDomParser),/source_layout_changed/);
 });
 const lei="549300R0VN9C371W0E07",period="2025-12-31";
