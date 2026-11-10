@@ -1,6 +1,6 @@
 // Authenticated, privacy-minded page counters and verified-admin-only dashboard.
 const client=window.agentSupabaseClient;
-const pages=new Set(["home","tasks","stocks","research","memory","settings","development","approvals"]);
+const pages=new Set(["home","tasks","stocks","tips","research","strategy","memory","settings","development","approvals"]);
 const root=document.getElementById("site-usage-dashboard");
 if(!client||!root)throw Error("Usage dashboard not mounted");
 let adminId=null,activePage=null,loading=false;
@@ -48,7 +48,7 @@ document.addEventListener("agent:admin-access",event=>{
  adminId=event.detail.uid;root.hidden=false;
  if(todayPage()==="development")void load();
 });
-const labels={home:"Etusivu",tasks:"Tehtävät",stocks:"Osakkeet",research:"Tutkimus",memory:"Muisti",settings:"Asetukset",development:"Kehitys",approvals:"Hyväksynnät"};
+const labels={home:"Etusivu",tasks:"Tehtävät",stocks:"Osakkeet",tips:"Tärpit",research:"Tutkimus",strategy:"Strategia",memory:"Muisti",settings:"Asetukset",development:"Kehitys",approvals:"Hyväksynnät"};
 const number=n=>Number(n||0).toLocaleString("fi-FI");
 async function load(){
  if(!adminId||loading)return;
