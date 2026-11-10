@@ -1,4 +1,5 @@
 import {evaluateSwingCandidate,swingRuleDistances} from "./strategy-swing.mjs";
+import {MAX_SWING_COMPARE,pickWatchlistSymbols,compareSwingCandidates} from "./strategy-swing-compare.mjs";
 import {swingRiskLevels} from "./strategy-risk-levels.mjs";
 import {backtestSwingHistory} from "./strategy-backtest.mjs";
 import {getCachedDaily,storeCachedDaily} from "./stock-history-cache.mjs";
@@ -33,6 +34,104 @@ function render(){
  const swingTicker=e("input");swingTicker.placeholder="Ticker, esim. NOKIA.HE";swingTicker.maxLength=20;
  const swingRun=e("button","Tarkista swing-ehdokas","secondary-btn");swingRun.type="button";
  const swingOutput=e("div");swing.append(swingTicker,swingRun,swingOutput);
+ const compare=e("section",undefined,"swing-compare-panel");
+ const compareTitle=e("h3","Seurantalistan swing-vertailu");
+ const compareHelp=e("p","Valitse 1–5 osaketta ja käynnistä vertailu. Jokainen uusi kurssihistoria voi kuluttaa yhden kurssihaun. Valmiit päiväkynttilät vain; ei AI-kutsuja eikä toimeksiantoja.","muted");
+ const selection=e("div",undefined,"swing-compare-picks");
+ const selectionHelp=e("p","","muted");
+ const selectionRefresh=e("button","Päivitä valinnat seurantalistalta","secondary-btn");selectionRefresh.type="button";
+ const compareRun=e("button","Vertaa valitut osakkeet","secondary-btn");compareRun.type="button";
+ const compareStatus=e("p","","muted");compareStatus.setAttribute("role","status");
+ const compareRows=e("div",undefined,"swing-compare-results");
+ let selectedTickers=new Set(),availableSymbols=[],compareBusy=false,compareGeneration=0;
+ const fmtCompare=n=>n.toLocaleString("fi-FI",{maximumFractionDigits:2,minimumFractionDigits:2});
+ const makeChoices=()=>{
+  const next=pickWatchlistSymbols(window.agentStockBridge?.get()||[]);
+  availableSymbols=next;
+  selectedTickers=new Set([...selectedTickers].filter(s=>next.some(x=>x.symbol===s)));
+  if(!selectedTickers.size)for(const item of next.slice(0,Math.min(MAX_SWING_COMPARE,next.length)))selectedTickers.add(item.symbol);
+  selection.replaceChildren();
+  for(const item of next){
+   const label=e("label",undefined,"swing-compare-choice"),check=e("input");check.type="checkbox";check.checked=selectedTickers.has(item.symbol);
+   check.addEventListener("change",()=>{
+    if(compareBusy){check.checked=selectedTickers.has(item.symbol);return}
+    if(check.checked&&selectedTickers.size>=MAX_SWING_COMPARE){check.checked=false;compareStatus.textContent="Voit valita korkeintaan "+MAX_SWING_COMPARE+" osaketta.";return}
+    if(check.checked)selectedTickers.add(item.symbol);else selectedTickers.delete(item.symbol);
+    selectionHelp.textContent="Valittu "+selectedTickers.size+"/"+MAX_SWING_COMPARE+" · "+next.length+" osaketta tarjolla";
+   });
+   label.append(check,e("span",item.name+" · "+item.symbol));selection.append(label);
+  }
+  selectionHelp.textContent=next.length?"Valittu "+selectedTickers.size+"/"+MAX_SWING_COMPARE+" · "+next.length+" osaketta tarjolla":"Seurantalistalla ei ole kelvollisia osaketunnuksia.";
+  compareRun.disabled=!next.length||compareBusy;
+ };
+ const showComparison=entries=>{
+  compareRows.replaceChildren();
+  const ranked=compareSwingCandidates(entries);
+  const valid=ranked.filter(x=>x.comparable);
+  const summary=e("p","Vertailukelpoisia "+valid.length+"/"+ranked.length+" · järjestys: täyttyneet ehdot, suurin puuttuva prosenttiosuus, puuttuvien prosenttien summa.","muted");
+  compareRows.append(summary);
+  const cards=e("div",undefined,"swing-compare-grid");
+  for(const item of ranked){
+   const card=e("article",undefined,"swing-compare-card");
+   card.append(e("strong",item.name+" · "+item.symbol));
+   if(!item.comparable){card.append(e("p","Ei vertailukelpoista dataa","muted"),e("small",item.error||item.result?.reason||"Tietoja puuttuu.","muted"));cards.append(card);continue}
+   const info=e("p",(item.result.status==="watch_candidate"?"Seurantaehdokas":"Ei toimenpidettä")+" · "+item.passed+"/3 ehtoa");
+   card.append(info);
+   const details=e("div",undefined,"swing-compare-distances");
+   const rules=item.result.rules;
+   for(const [label,ok,need] of [["SMA200",rules.aboveSma200,item.missing.sma200],["20 pv huippu",rules.breakout20,item.missing.breakout20],["Volyymi",rules.volumeAboveAverage,item.missing.volume]]){
+    details.append(e("span",(ok?"✓ ":"✕ ")+label+" · "+(ok?"täyttyy":need===0?"raja saavutettu, ylitys puuttuu":"puuttuu "+fmtCompare(need)+" %")));
+   }
+   card.append(details);
+   const time=Date.parse(item.marketAt);
+   card.append(e("small",Number.isFinite(time)?"Havainto "+new Date(time).toLocaleString("fi-FI",{timeZone:"Europe/Helsinki",dateStyle:"short",timeStyle:"short"})+" (Suomen aika)":"Havainnon päiväys puuttuu","muted"));
+   cards.append(card);
+  }
+  compareRows.append(cards,e("p","Eri pörssien sulkemisajat ja valuutat voivat erota. Näytetty läheisyys kuvaa tämänhetkisiä sääntökynnyksiä, ei tuottoennustetta. Vain yksi valitsemasi hakukierros käynnistyy painalluksesta.","muted"));
+ };
+ selectionRefresh.addEventListener("click",()=>{if(!compareBusy){makeChoices();compareStatus.textContent="Valinnat päivitetty."}});
+ compareRun.addEventListener("click",async()=>{
+  if(compareBusy)return;
+  const chosen=availableSymbols.filter(x=>selectedTickers.has(x.symbol)).slice(0,MAX_SWING_COMPARE);
+  if(!chosen.length){compareStatus.textContent="Valitse vähintään yksi osake.";return}
+  compareBusy=true;compareRun.disabled=true;selectionRefresh.disabled=true;compareRows.replaceChildren();
+  const generation=++compareGeneration,expectedUser=uid,entries=[];
+  try{
+   const {data:{session}}=await db.auth.getSession();
+   if(!session?.access_token||session.user?.id!==expectedUser)throw Error("Kirjaudu sisään.");
+   for(let i=0;i<chosen.length;i++){
+    if(uid!==expectedUser||generation!==compareGeneration)break;
+    const item=chosen[i];
+    compareStatus.textContent="Käsitellään "+(i+1)+"/"+chosen.length+" · "+item.symbol;
+    try{
+     let history=getCachedDaily(expectedUser,item.symbol);
+     if(!history){
+      const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),12000);
+      let response;
+      try{response=await fetch("https://ywrnmfozoyniftkzcopt.supabase.co/functions/v1/stock-quotes",{
+       method:"POST",signal:ctrl.signal,headers:{Authorization:"Bearer "+session.access_token,apikey:"sb_publishable_7wcqNJq1vLpbM_RgkoEyQQ_2VLq9cqE","Content-Type":"application/json"},
+       body:JSON.stringify({action:"history",symbol:item.symbol,period:"1y"})
+      })}finally{clearTimeout(timeout)}
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok)throw Error(payload.error||"Kurssihaku epäonnistui ("+response.status+")");
+      const {data:{session:live}}=await db.auth.getSession();
+      if(live?.user?.id!==expectedUser)throw Error("Istunto vaihtui.");
+      storeCachedDaily(expectedUser,item.symbol,payload);history=payload;
+     }
+     entries.push({...item,result:evaluateSwingCandidate(history,Date.now())});
+    }catch(err){entries.push({...item,error:err.name==="AbortError"?"Kurssihaun aikakatkaisu":err.message})}
+   }
+   if(uid===expectedUser&&generation===compareGeneration){
+    showComparison(entries);
+    compareStatus.textContent="Vertailtu "+entries.length+"/"+chosen.length+" osaketta. Uudet haut tehdään vain käyttäjän pyynnöstä.";
+   }
+  }catch(err){if(uid===expectedUser)compareStatus.textContent="Vertailu epäonnistui: "+err.message}
+  finally{compareBusy=false;compareRun.disabled=false;selectionRefresh.disabled=false;}
+ });
+ compare.append(compareTitle,compareHelp,selectionRefresh,selectionHelp,selection,compareRun,compareStatus,compareRows);
+ swing.append(compare);
+ makeChoices();
+
  swingRun.onclick=async()=>{const symbol=normalizeTicker(swingTicker.value);if(!/^[A-Z0-9^][A-Z0-9.^_-]{0,19}$/.test(symbol)){swingOutput.textContent="Tarkista osaketunnus.";return}
   swingTicker.value=symbol;swingRun.disabled=true;swingOutput.textContent="Haetaan yhden vuoden hintahistoriaa: "+symbol+"…";
   const expectedUser=uid;
