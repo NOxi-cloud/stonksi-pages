@@ -268,3 +268,14 @@
 .company-source-financial-record{display:flex;flex-direction:column;gap:7px;border:1px solid var(--border);background:#141a27;border-radius:11px;padding:14px;margin:10px 0;overflow-wrap:anywhere}
 .company-source-financial-record>small{display:block;color:var(--muted);line-height:1.5}
 .company-source-financial-record .company-source-field{padding:7px 0;border-top:1px solid #2e3546}
+
+/* Local manual swing progress comparison */
+#strategy-agent-workspace .swing-progress-label{font-size:12px;margin:7px 0!important;color:#c8c4dc}
+#strategy-agent-workspace .swing-progress-label[data-state="improved"],
+#strategy-agent-workspace .swing-progress-label[data-state="closer"]{color:#75dbb4}
+#strategy-agent-workspace .swing-progress-label[data-state="weakened"],
+#strategy-agent-workspace .swing-progress-label[data-state="further"]{color:#f4b3ad}
+#strategy-agent-workspace .swing-progress-label[data-state="mixed"]{color:#eac88a}
+#strategy-agent-workspace .swing-compare-history{margin:16px 0 0;padding-top:12px;border-top:1px solid #353c50}
+#strategy-agent-workspace .swing-compare-history[hidden]{display:none!important}
+#strategy-agent-workspace .swing-compare-history h4{margin:0 0 8px}
