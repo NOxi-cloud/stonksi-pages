@@ -3,16 +3,16 @@ import {evaluateTechnicalConfirmation,CONFIRMATION_VERSION} from "./strategy-con
 // Descriptive post-signal price comparison. No order simulation or forecast.
 // Re-evaluate each prefix: no future prices enter the signal computation.
 const helsinkiDay=ms=>{const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Helsinki",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(ms);const p=Object.fromEntries(parts.map(x=>[x.type,x.value]));return p.year+"-"+p.month+"-"+p.day};
-export function backtestSwingHistory(raw,maxCases=35){
- if(raw?.period!=="1y"||!Array.isArray(raw.points)||raw.points.length<215||raw.points.length>360)return {error:"Vähintään 215 kelvollista päivähavaintoa tarvitaan."};
+export function backtestSwingHistory(raw,maxCases=550){
+ if(!["1y","3y"].includes(raw?.period)||!Array.isArray(raw.points)||raw.points.length<215||raw.points.length>750)return {error:"Tarvitaan 215–750 kelvollista päivähavaintoa (1v tai 3v)."};
  const rows=raw.points;
- const cap=Math.max(1,Math.min(35,Math.floor(maxCases)||35));
+ const cap=Math.max(1,Math.min(550,Math.floor(maxCases)||550));
  // Latest five observations cannot be evaluated because their outcomes are unknown.
  const maxIndex=rows.length-6,start=Math.max(205,maxIndex-cap+1),results=[];
  for(let i=start;i<=maxIndex;i++){
   const current=rows[i];
   if(!Number.isSafeInteger(current?.t)||!Number.isFinite(current?.price)||current.price<=0)continue;
-  const prefix={...raw,points:rows.slice(0,i+1)};
+  const prefix={...raw,period:"1y",points:rows.slice(Math.max(0,i-359),i+1)};
   // Only available data through this historical candle. End-of-day after close.
   // 23:59 UTC is after the local Helsinki close for these daily observations.
   const assessedAt=Date.parse(new Date(current.t*1000).toISOString().slice(0,10)+"T23:59:00Z");
