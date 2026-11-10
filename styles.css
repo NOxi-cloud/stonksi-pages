@@ -239,3 +239,10 @@
  .piksu-tips-toolbar button{flex:1 1 135px;white-space:normal;min-height:46px}
  .piksu-tips-toolbar .external-link{flex:1 1 100%}
 }
+
+/* On-demand ESEF XBRL fact-inspection controls */
+.company-source-inspect-button{display:block;min-height:42px;white-space:normal;max-width:100%;margin:12px 0;padding:8px 14px}
+.company-source-inspection{min-width:0;overflow-wrap:anywhere}
+.company-source-inspection>.company-source-field{border-bottom:1px solid #303747;padding:8px 0}
+.company-source-inspection>p{margin:10px 0;line-height:1.5}
+@media(max-width:600px){.company-source-inspect-button{width:100%}}
