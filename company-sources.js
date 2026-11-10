@@ -34,6 +34,42 @@ if(root&&db){
   row.append(el("strong",label),el("span",value==null?"Ei saatavilla":String(value)));host.append(row);
  };
  const currentUser=async()=>{const {data:{session}}=await db.auth.getSession();return session?.access_token&&session?.user?.id?session:null};
+
+ const inspectLabels={revenue:"Liikevaihto",operating_profit:"Liikevoitto",profit_loss:"Tilikauden tulos",
+  assets:"Varat",equity:"Oma pääoma",liabilities:"Velat",operating_cash_flow:"Liiketoiminnan rahavirta",
+  capital_expenditure:"Investointien rahavirta"};
+ async function inspectEsef(button,output,ticker,index){
+  const session=await currentUser();
+  if(!session){output.textContent="Kirjaudu sisään poimiaksesi talouslukuja.";return}
+  if(!/^[A-Z0-9^._-]{1,20}\.HE$/.test(ticker))return;
+  button.disabled=true;output.replaceChildren();output.append(el("p","Luetaan valitun raportin XBRL-JSON-tiedostoa…","muted"));
+  const owner=session.user.id;
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),17000);
+  try{
+   const res=await fetch("https://ywrnmfozoyniftkzcopt.supabase.co/functions/v1/esef-inspect",{
+    method:"POST",signal:controller.signal,
+    headers:{"Authorization":"Bearer "+session.access_token,"apikey":publicKey,"Content-Type":"application/json"},
+    body:JSON.stringify({action:"inspect",ticker,candidate_index:index})
+   });
+   const payload=await res.json();
+   const current=await currentUser();
+   if(current?.user?.id!==owner){output.replaceChildren();return}
+   if(!res.ok)throw Error(typeof payload?.error==="string"?payload.error:
+     typeof payload?.message==="string"?payload.message:"Raportin varmennus ei onnistunut");
+   output.replaceChildren();
+   const metrics=payload?.evidence?.metrics;
+   if(!Array.isArray(metrics)||!metrics.length)throw Error("Varmennettuja numeerisia havaintoja ei saatu.");
+   output.append(el("strong","Poimitut raporttiluvut (ei vielä tarkastettu osakelajin suhteen)"));
+   const formatted=n=>Number(n/1e6).toLocaleString("fi-FI",{maximumFractionDigits:2})+" milj. €";
+   for(const item of metrics.slice(0,8)){
+    if(typeof item?.key!=="string"||!Number.isFinite(item.value))continue;
+    addRow(output,inspectLabels[item.key]||item.key,formatted(item.value));
+   }
+   output.append(el("p","Luvut poimittu XBRL-JSON-muodosta ja tallennettu. LEI-/osakelaji-, osakemäärä- ja tilintarkastusvarmistukset ovat edelleen kesken. Ei Stonksin tavoitehintaa.","muted"));
+  }catch(err){output.replaceChildren();output.append(el("p",err?.name==="AbortError"?"Raporttihaku aikakatkaistiin.":"Talouslukujen poiminta epäonnistui: "+String(err?.message||"Tuntematon virhe"),"muted"))}
+  finally{clearTimeout(timer);button.disabled=false}
+ }
+
  function render(payload){
   result.replaceChildren();
   const snapshot=payload?.snapshot&&typeof payload.snapshot==="object"?payload.snapshot:payload;
@@ -59,7 +95,7 @@ if(root&&db){
   addRow(esefSection,"Haun tila",({candidate:"Raporttiehdokkaita löytyi",ambiguous:"Useita liikkeeseenlaskijoita",not_found:"Ei hakemisto-osumia",unavailable:"Hakemisto ei vastannut",skipped:"Ei voitu suorittaa"}[esef?.status]||"Ei tietoa"));
   const candidates=Array.isArray(esef?.candidates)?esef.candidates.slice(0,3):[];
   const groups=new Map();
-  for(const item of candidates){const period=String(item.period_end||"Tuntematon");if(!groups.has(period))groups.set(period,[]);groups.get(period).push(item)}
+  for(const [idx,item] of candidates.entries()){const period=String(item.period_end||"Tuntematon");if(!groups.has(period))groups.set(period,[]);groups.get(period).push({...item,_index:idx})}
   for(const [period,variants] of groups){
    const periodHeading=el("h5","Tilikausi "+period);periodHeading.className="company-source-period";esefSection.append(periodHeading);
    for(const item of variants){
@@ -72,6 +108,12 @@ if(root&&db){
    const link=safeLink(item.viewer_url||item.json_url,["filings.xbrl.org"],"Avaa raporttimerkintä");
    if(link){const wrap=el("div",undefined,"company-source-link");wrap.append(link);entry.append(wrap);}
    entry.append(el("small","Hakemistoehdokas – sisältöä ja lukuja ei vielä varmennettu."));
+   if(typeof item.json_url==="string"){
+    const check=el("button","Poimi IFRS-taloustiedot","secondary-btn");check.type="button";check.className+=" company-source-inspect-button";
+    const inspection=el("div",undefined,"company-source-inspection");
+    check.addEventListener("click",()=>{void inspectEsef(check,inspection,payload.ticker,item._index)});
+    entry.append(check,inspection);
+   }
    esefSection.append(entry);
    }
   }
