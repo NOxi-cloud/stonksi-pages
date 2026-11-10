@@ -26,7 +26,7 @@ test("same passed rules: smallest worst shortfall ranks first",()=>{
  const b={...candidate(2,true,false,true),previous20High:10.5};
  const ranked=compareSwingCandidates([{symbol:"AAPL",result:a},{symbol:"GOOG",result:b}]);
  assert.equal(ranked[0].symbol,"GOOG");
- assert.equal(ranked[0].missing.breakout20,5);
+ assert.ok(Math.abs(ranked[0].missing.breakout20-5)<1e-8,"breakout shortfall differs by more than floating point tolerance");
 });
 test("zero gap does not falsely mark threshold as passed",()=>{
  const r=candidate(2,true,false,true);r.previous20High=10;
