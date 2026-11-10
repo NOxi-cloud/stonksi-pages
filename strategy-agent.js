@@ -146,7 +146,75 @@ function render(){
    }
    if(uid!==expectedUser)return;const v=evaluateSwingCandidate(data,Date.now());swingOutput.replaceChildren();
    swingOutput.append(e("h3",v.status==="watch_candidate"?"Seurantaehdokas":v.status==="no_action"?"Ei toimenpidettä":"Ei riittävästi tietoa"));
-   const historyButton=e("button","Tutki historialliset signaalit (5 havaintoa)","secondary-btn");historyButton.type="button";const historyOut=e("div");swingOutput.append(historyButton,historyOut);historyButton.onclick=()=>{const test=backtestSwingHistory(data);historyOut.replaceChildren();if(test.error){historyOut.append(e("p",test.error,"muted"));return}historyOut.append(e("h3","Historiallinen tutkimus"),e("p","Tutkimusehdokkaita "+test.candidates+"/"+test.rows.length+" havaintoa · 5 päivän keskim. muutos "+(test.mean===null?"ei laskettavissa":test.mean.toFixed(2)+" %"),"muted"),e("p","Vertailujakson kaikkien havaintojen keskiarvo: "+(test.baselineMean===null?"–":test.baselineMean.toFixed(2)+" %")+" · erotus "+(test.relativeDifference===null?"–":test.relativeDifference.toFixed(2)+" prosenttiyksikköä"),"muted"),e("p","Nousseita ehdokkaita "+test.positiveCount+"/"+test.candidates+" (ei ennustettu onnistumistodennäköisyys).","muted"),e("p","Erilliset ei-päällekkäiset 5 havainnon ehdokasjaksot: "+test.independentCount+" · keskim. muutos "+(test.independentMean===null?"ei laskettavissa":test.independentMean.toFixed(2)+" %")+" · nousseita "+test.independentPositive+"/"+test.independentCount,"muted"),e("p","Trendijaksot (SMA50): "+["rising","sideways","falling"].map(k=>{const r=test.regimes[k];return ({"rising":"Nouseva","sideways":"Sivuttainen","falling":"Laskeva"}[k])+": "+r.candidates+"/"+r.observations+" ehdokasta, muutos "+(r.mean===null?"–":r.mean.toFixed(2)+" %")}).join(" · "),"muted"),e("p","RSI/MACD-vahvistus (RSI 45–70 ja MACD-histogrammi > 0): "+test.confirmation.confirmed+"/"+test.confirmation.eligible+" swing-ehdokasta","muted"),e("p","Vahvistettujen keskimääräinen 5 havainnon kurssimuutos: "+(test.confirmation.mean===null?"ei laskettavissa":test.confirmation.mean.toFixed(2)+" %")+" · kaikkien swing-ehdokkaiden keskiarvo: "+(test.mean===null?"–":test.mean.toFixed(2)+" %"),"muted"),e("p","Vahvistettuja ei-päällekkäisiä ehdokkaita "+test.confirmation.independentCount+" · keskim. muutos "+(test.confirmation.independentMean===null?"ei laskettavissa":test.confirmation.independentMean.toFixed(2)+" %"),"muted"),e("p",test.disclaimer,"muted"));const saveTest=e("button","Tallenna historiatesti Supabaseen","secondary-btn");saveTest.type="button";historyOut.append(saveTest);saveTest.onclick=async()=>{saveTest.disabled=true;const {data:{session:current}}=await db.auth.getSession();if(!current||current.user.id!==expectedUser||uid!==expectedUser){historyOut.append(e("p","Kirjautuminen vaihtui. Tallennus keskeytettiin.","muted"));return}const lastTime=data.last_time||new Date(data.points.at(-1).t*1000).toISOString();const {error}=await db.from("swing_backtest_runs").insert({user_id:expectedUser,symbol,algorithm:"swing_eod_rsi_macd_v2",sample_count:test.rows.length,candidate_count:test.candidates,avg_change_pct:test.mean,source_last_time:lastTime,findings:test.rows.filter(x=>x.signal==="watch_candidate").slice(-35)});historyOut.append(e("p",error?"Tallennus epäonnistui: "+error.message:"Historiatesti tallennettu Supabaseen.","muted"));if(error)saveTest.disabled=false};for(const row of test.rows.filter(x=>x.signal==="watch_candidate").slice(-12).reverse())historyOut.append(e("p",row.day+" · "+row.price.toFixed(3)+" → "+row.laterPrice.toFixed(3)+" · "+row.changePct.toFixed(2)+" %","muted"))};
+   const historyButton=e("button","Tutki 1 vuoden historia (5 havaintoa)","secondary-btn");
+   const historyLongButton=e("button","Tutki 3 vuoden historia (5 havaintoa)","secondary-btn");
+   const historyOut=e("div");
+   historyButton.type="button";historyLongButton.type="button";
+   swingOutput.append(historyButton,historyLongButton,historyOut);
+   let historyRunning=false;
+   const fmtPct=n=>n===null||!Number.isFinite(n)?"ei laskettavissa":n.toFixed(2)+" %";
+   async function researchHistory(period){
+    if(historyRunning)return;
+    historyRunning=true;historyButton.disabled=true;historyLongButton.disabled=true;
+    historyOut.replaceChildren(e("p",period==="3y"?"Haetaan pidempi päivähistoria käyttäjän pyynnöstä…":"Lasketaan tallennetusta vuosihistoriasta…","muted"));
+    try{
+     let testData=data;
+     if(period==="3y"){
+      const {data:{session:active}}=await db.auth.getSession();
+      if(!active?.access_token||active.user.id!==expectedUser||uid!==expectedUser)throw Error("Kirjautuminen vaaditaan.");
+      const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),15000);
+      let response;
+      try{response=await fetch("https://ywrnmfozoyniftkzcopt.supabase.co/functions/v1/stock-quotes",{
+       method:"POST",signal:ctrl.signal,
+       headers:{Authorization:"Bearer "+active.access_token,apikey:"sb_publishable_7wcqNJq1vLpbM_RgkoEyQQ_2VLq9cqE","Content-Type":"application/json"},
+       body:JSON.stringify({action:"history",period:"3y",symbol})
+      })}finally{clearTimeout(timeout)}
+      const payload=await response.json();
+      if(!response.ok)throw Error(payload.error||"Kolmen vuoden kurssihaku epäonnistui.");
+      testData=payload;
+     }
+     if(uid!==expectedUser)return;
+     const test=backtestSwingHistory(testData);
+     historyOut.replaceChildren();
+     if(test.error){historyOut.append(e("p",test.error,"muted"));return}
+     historyOut.append(
+      e("h3","Historiallinen tutkimus · "+(period==="3y"?"3 vuoden":"1 vuoden")+" päivähistoria"),
+      e("p","Kelvollisia vertailupäiviä "+test.rows.length+" · swing-ehdokkaita "+test.candidates+" · 5 havaintopäivän keskim. muutos "+fmtPct(test.mean),"muted"),
+      e("p","Kaikkien vertailupäivien keskiarvo "+fmtPct(test.baselineMean)+" · erotus "+(test.relativeDifference===null?"–":test.relativeDifference.toFixed(2)+" prosenttiyksikköä"),"muted"),
+      e("p","Nousseita swing-ehdokkaita "+test.positiveCount+"/"+test.candidates,"muted"),
+      e("p","Ei-päällekkäisiä ehdokkaita "+test.independentCount+" · keskim. muutos "+fmtPct(test.independentMean)+" · nousseita "+test.independentPositive+"/"+test.independentCount,"muted"),
+      e("p","RSI/MACD-vahvistettuja "+test.confirmation.confirmed+"/"+test.confirmation.eligible+" · niiden keskim. muutos "+fmtPct(test.confirmation.mean),"muted"),
+      e("p","Ei-päällekkäisiä RSI/MACD-vahvistettuja "+test.confirmation.independentCount+" · keskim. muutos "+fmtPct(test.confirmation.independentMean),"muted"),
+      e("p","Trendijaksot: "+["rising","sideways","falling"].map(k=>{const r=test.regimes[k];return ({"rising":"Nouseva","sideways":"Sivuttainen","falling":"Laskeva"}[k])+": "+r.candidates+"/"+r.observations+" ehdokasta, "+fmtPct(r.mean)}).join(" · "),"muted"),
+      e("p",test.disclaimer,"muted")
+     );
+     const saveTest=e("button","Tallenna tämä testi Supabaseen","secondary-btn");
+     saveTest.type="button";historyOut.append(saveTest);
+     saveTest.onclick=async()=>{
+      saveTest.disabled=true;
+      try{
+       const {data:{session:current}}=await db.auth.getSession();
+       if(!current?.user||current.user.id!==expectedUser||uid!==expectedUser)throw Error("Istunto vaihtui. Tallennusta ei tehty.");
+       const lastTime=testData.last_time||new Date(testData.points.at(-1).t*1000).toISOString();
+       const {error}=await db.from("swing_backtest_runs").insert({
+        user_id:expectedUser,symbol,
+        algorithm:"swing_eod_rsi_macd_v3_"+period,
+        sample_count:test.rows.length,candidate_count:test.candidates,
+        avg_change_pct:test.mean,source_last_time:lastTime,
+        findings:test.rows.filter(x=>x.signal==="watch_candidate").slice(-35)
+       });
+       if(error)throw error;
+       historyOut.append(e("p","Historiatesti tallennettu Supabaseen.","muted"));
+      }catch(err){historyOut.append(e("p","Tallennus epäonnistui: "+err.message,"muted"));saveTest.disabled=false}
+     };
+     for(const row of test.rows.filter(x=>x.signal==="watch_candidate").slice(-12).reverse()){
+      historyOut.append(e("p",row.day+" · "+row.price.toFixed(3)+" → "+row.laterPrice.toFixed(3)+" · "+fmtPct(row.changePct),"muted"));
+     }
+    }catch(err){if(uid===expectedUser)historyOut.replaceChildren(e("p","Historiatesti epäonnistui: "+err.message,"muted"))}
+    finally{historyRunning=false;historyButton.disabled=false;historyLongButton.disabled=false}
+   }
+   historyButton.onclick=()=>researchHistory("1y");
+   historyLongButton.onclick=()=>researchHistory("3y");
    if(v.rules){
     const table=e("div",undefined,"swing-rule-grid"),d=swingRuleDistances(v);
     const fmt=(n,dec=2)=>n.toLocaleString("fi-FI",{minimumFractionDigits:dec,maximumFractionDigits:dec});
