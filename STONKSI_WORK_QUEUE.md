@@ -11,7 +11,7 @@ Päivitetty: 2026-11-10. Lähteet: GitHub-main, Supabase-tietokanta ja aiemmat S
 
 ## P0 – tiedon eheys ja käyttökelpoisuus
 1. **[Käynnissä] Timon lista / Tärpit**: käyttäjän päivittämä Piksu-lähde, tallennus ja seurantalistan osumat. Julkaistu v0.98.0, mutta ensimmäinen kirjautuneen käyttäjän haku ja HTML-parserin todellinen toimivuus on tarkistettava. Näytetään vain rajattu määrä arvostuslukuja ja attribuutio, ei koko listaa.
-2. **[Keskeneräinen] ESEF JSON → viralliset IFRS-taloustiedot**: turvallinen lähdehaku, raportin SHA256, LEI/ISIN, validointi, IFRS-käsitteiden kausien ja yksiköiden tarkistus, ristiriitojen hylkäys, tallettaminen `company_financial_facts`-tauluun. Pelkkä löydetty hakemistorivi ei ole vahvistettu tilinpäätösluku.
+2. **[Osittain toteutettu, käytännön testi kesken] ESEF JSON → IFRS-taloustiedot**: turvallinen lähdehaku, raportin SHA256, LEI/ISIN, validointi, IFRS-käsitteiden kausien ja yksiköiden tarkistus, ristiriitojen hylkäys, tallettaminen `company_financial_facts`-tauluun. Manuaalinen esef-inspect-palvelu ja Poimi IFRS-taloustiedot -painike on julkaistu 10.11.2026, mutta todellinen Metso-läpimeno ja osakelajin varmennus ovat vielä tekemättä. Pelkkä löydetty hakemistorivi ei ole vahvistettu tilinpäätösluku.
 3. **[Keskeneräinen] Osakekohtainen listatun osakelajin tunnistus**: pörssi/ticker → liikkeeseenlaskija LEI → ISIN → valuutta → dilutoitu osakemäärä; ei perusosakkeiden ja eri osakelajien sekoittamista.
 4. **[Keskeneräinen] Yleiskäyttöinen EUR-arvostus**: varmennettu TTM/FY/FCF, yritysarvo, nettovelka, EV/EBIT ja P/FCF; DCF vain riittävin rahavirta- ja diskonttausoletuksin. Bear/Base/Bull eurohintahaarukat ja lähdeauditointi. Ei arvostusta puuttuvista tiedoista.
 
@@ -33,6 +33,6 @@ Päivitetty: 2026-11-10. Lähteet: GitHub-main, Supabase-tietokanta ja aiemmat S
 15. **[Kesken] Tallennettujen historiallisten signaalien arviointi**: mittarien toteutumat, jakaumat ja mahdolliset backtest-harhat ilman sijoitussuositusväitteitä.
 
 ## Toteutuksen järjestys
-Tärpit-näkymän käytännön testaus → ESEF-JSON:n tarkistettu poiminta → EUR-arvostuksen auditointi → hintahistoria ja signaalit → testit ja tietoturvakorjaukset → siivous ja viimeistely.
+Tärpit-näkymän käytännön testaus → ESEF-JSON:n poiminnan käytännön testaus ja varmennus → EUR-arvostuksen auditointi → hintahistoria ja signaalit → testit ja tietoturvakorjaukset → siivous ja viimeistely.
 
 Huom: kaikki 'keskeneräinen'-merkinnät tarkoittavat avoimia tehtäviä, eivät todettua toimintahäiriötä. Edistymisestä voi pitää ajantasaista listaa muuttamalla tätä tiedostoa version mukana.
